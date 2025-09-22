@@ -124,7 +124,7 @@ export default function LoadBalancerTestPage() {
   const testConnection = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/loadbalancer/health', {
+      const response = await fetch('/api/grpc/health', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ server_address: serverAddress })
@@ -153,7 +153,7 @@ export default function LoadBalancerTestPage() {
     if (!isConnected) return
     
     try {
-      const response = await fetch('/api/loadbalancer/status', {
+      const response = await fetch('/api/grpc/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ server_address: serverAddress })
@@ -181,7 +181,7 @@ export default function LoadBalancerTestPage() {
     const startTime = Date.now()
     
     try {
-      const response = await fetch('/api/loadbalancer/ai-request', {
+      const response = await fetch('/api/grpc/ai-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,7 +228,7 @@ export default function LoadBalancerTestPage() {
     const startTime = Date.now()
     
     try {
-      const response = await fetch('/api/loadbalancer/sensor-data', {
+      const response = await fetch('/api/grpc/sensor-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,10 +244,10 @@ export default function LoadBalancerTestPage() {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         type: "Sensor Data Test",
-        model: "agricultural-classifier",
+        model: "dhenu2-agricultural-analysis",
         prompt: `Temp: ${sensorData.temperature}°C, Humidity: ${sensorData.humidity}%`,
         success: data.success,
-        response: data.analysis || data.error,
+        response: JSON.stringify(data.analysis) || data.error,
         processing_time: (endTime - startTime) / 1000,
         client_id: "sensor-processor"
       }
