@@ -31,7 +31,31 @@ async function callPythonGRPCClient(action: string, params: any): Promise<any> {
   return new Promise((resolve, reject) => {
     const pythonScript = path.join(process.cwd(), '..', 'scripts', 'grpc_bridge.py')
     
-    const python = spawn('python3', [pythonScript, action, JSON.stringify(params)])
+    // Try to use virtual environment python first
+    const pythonCommands = [
+      path.join(process.cwd(), '..', 'venv', 'bin', 'python'),
+      path.join(process.cwd(), '..', 'venv', 'Scripts', 'python.exe'),
+      'python3',
+      'python'
+    ]
+    
+    let pythonCmd = 'python3'
+    for (const cmd of pythonCommands) {
+      try {
+        if (require('fs').existsSync(cmd)) {
+          pythonCmd = cmd
+          break
+        }
+      } catch (e) {}
+    }
+    
+    const python = spawn(pythonCmd, [pythonScript, action, JSON.stringify(params)], {
+      env: {
+        ...process.env,
+        PYTHONPATH: path.join(process.cwd(), '..'),
+        PATH: process.env.PATH
+      }
+    })
     
     let stdout = ''
     let stderr = ''

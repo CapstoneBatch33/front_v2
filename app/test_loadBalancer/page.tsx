@@ -138,7 +138,15 @@ export default function LoadBalancerTestPage() {
         await refreshSystemStatus()
       } else {
         setIsConnected(false)
-        toast.error(`Connection failed: ${data.error}`)
+        const errorMsg = data.error || "Unknown connection error"
+        toast.error(`Connection failed: ${errorMsg}`)
+        
+        // Show helpful error messages
+        if (errorMsg.includes("Failed to import gRPC modules")) {
+          toast.error("Please run setup_ai_environment.py first to generate gRPC files")
+        } else if (errorMsg.includes("Connection refused")) {
+          toast.error("Make sure the load balancer server is running on the Raspberry Pi")
+        }
       }
     } catch (error) {
       setIsConnected(false)

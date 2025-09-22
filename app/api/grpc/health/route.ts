@@ -29,10 +29,38 @@ export async function POST(request: NextRequest) {
 
 async function callPythonGRPCClient(action: string, params: any): Promise<any> {
   return new Promise((resolve, reject) => {
-    // Path to your Python gRPC client script (adjust based on your project structure)
+    // Path to your Python gRPC client script
     const pythonScript = path.join(process.cwd(), '..', 'scripts', 'grpc_bridge.py')
     
-    const python = spawn('python3', [pythonScript, action, JSON.stringify(params)])
+    // Try to use virtual environment python first, then fallback to system python
+    const pythonCommands = [
+      path.join(process.cwd(), '..', 'venv', 'bin', 'python'),  // Linux venv
+      path.join(process.cwd(), '..', 'venv', 'Scripts', 'python.exe'),  // Windows venv
+      'python3',  // System python3
+      'python'    // System python
+    ]
+    
+    let pythonCmd = 'python3'  // Default fallback
+    
+    // Find the first available python command
+    for (const cmd of pythonCommands) {
+      try {
+        if (require('fs').existsSync(cmd)) {
+          pythonCmd = cmd
+          break
+        }
+      } catch (e) {
+        // Continue to next option
+      }
+    }
+    
+    const python = spawn(pythonCmd, [pythonScript, action, JSON.stringify(params)], {
+      env: {
+        ...process.env,
+        PYTHONPATH: path.join(process.cwd(), '..'),
+        PATH: process.env.PATH
+      }
+    })
     
     let stdout = ''
     let stderr = ''
