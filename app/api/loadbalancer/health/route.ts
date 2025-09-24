@@ -11,29 +11,35 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // For now, we'll simulate the connection test
-    // In a real implementation, you would make a gRPC call to the load balancer
+    console.log(`Redirecting to REAL gRPC health check for: ${server_address}`)
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock response - replace with actual gRPC health check
-    const mockHealthResponse = {
-      healthy: true,
-      message: "AI Load Balancer is running",
-      timestamp: Math.floor(Date.now() / 1000)
+    // Use the real gRPC health endpoint instead of hardcoded data
+    try {
+      const response = await fetch('http://localhost:3000/api/grpc/health', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ server_address })
+      })
+      
+      const result = await response.json()
+      return NextResponse.json(result)
+      
+    } catch (error: any) {
+      console.error('Failed to get real health status:', error)
+      
+      return NextResponse.json({
+        success: false,
+        error: `Failed to connect to Pi: ${error.message}`
+      }, { status: 500 })
     }
     
-    return NextResponse.json({
-      success: true,
-      health: mockHealthResponse
-    })
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('Health check error:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to connect to load balancer' 
+      error: `Failed to connect to load balancer: ${error.message}` 
     }, { status: 500 })
   }
 }

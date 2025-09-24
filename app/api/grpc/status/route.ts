@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { spawn } from 'child_process'
-import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,118 +11,230 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`Getting system status from: ${server_address}`)
+    console.log(`Getting REAL system status from: ${server_address}`)
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Mock system status with agricultural AI models
-    const mockSystemStatus = {
-      timestamp: new Date().toISOString(),
-      total_clients: 2,
-      active_clients: 2,
-      total_models_deployed: 4,
-      active_tasks: 0,
-      completed_tasks: 12,
-      available_models: ["llama-3.2-11b-vision", "dhenu2-1b-instruct", "dhenu2-3b-instruct", "dhenu2-8b-instruct", "yolo-v8"],
-      clients: [
-        {
-          client_id: "client-001-gaming-laptop",
-          hostname: "gaming-laptop",
-          ip_address: "192.168.1.101",
-          performance_score: 85.2,
-          deployed_models: ["dhenu2-8b-instruct", "llama-3.2-11b-vision"],
-          current_tasks: 0,
-          last_seen: Date.now() / 1000,
-          status: "online",
-          specs: {
-            cpu_cores: 8,
-            cpu_frequency_ghz: 3.2,
-            ram_gb: 32,
-            gpu_info: "NVIDIA RTX 4080",
-            gpu_memory_gb: 16,
-            os_info: "Windows 11",
-            performance_score: 85.2
+    // Get real data from your Raspberry Pi using gRPC
+    try {
+      // First get health status
+      const healthResult = await callRealGRPCClient("health_check", { server_address })
+      
+      if (!healthResult.success) {
+        throw new Error("Health check failed")
+      }
+      
+      // Then get available models
+      const modelsResult = await callRealGRPCClient("get_models", { server_address })
+      
+      // Build real system status from actual Pi data
+      const realSystemStatus = {
+        timestamp: new Date().toISOString(),
+        total_clients: 0, // Will be calculated from models
+        active_clients: 0,
+        total_models_deployed: modelsResult.models ? modelsResult.models.length : 0,
+        active_tasks: 0,
+        completed_tasks: 0, // This would need to be tracked by the Pi
+        available_models: modelsResult.models ? modelsResult.models.map((m: any) => m.model_name) : [],
+        clients: [] // Will be built from model data
+      }
+      
+      // Extract unique clients from model data
+      const clientsMap = new Map()
+      
+      if (modelsResult.models) {
+        modelsResult.models.forEach((model: any) => {
+          if (model.client_id && model.client_id !== "") {
+            if (!clientsMap.has(model.client_id)) {
+              clientsMap.set(model.client_id, {
+                client_id: model.client_id,
+                hostname: model.client_id.replace(/^client-\d+-/, ''), // Extract hostname from client_id
+                ip_address: extractIPFromEndpoint(model.endpoint_url),
+                performance_score: model.performance_score || 0,
+                deployed_models: [],
+                current_tasks: 0,
+                last_seen: Math.floor(Date.now() / 1000),
+                status: model.status === "running" ? "online" : "offline",
+                specs: {
+                  cpu_cores: 0, // Would need to be provided by Pi
+                  cpu_frequency_ghz: 0,
+                  ram_gb: 0,
+                  gpu_info: "Unknown",
+                  gpu_memory_gb: 0,
+                  os_info: "Unknown",
+                  performance_score: model.performance_score || 0
+                }
+              })
+            }
+            
+            // Add model to client's deployed models
+            const client = clientsMap.get(model.client_id)
+            client.deployed_models.push(model.model_name)
           }
+        })
+      }
+      
+      realSystemStatus.clients = Array.from(clientsMap.values())
+      realSystemStatus.total_clients = realSystemStatus.clients.length
+      realSystemStatus.active_clients = realSystemStatus.clients.filter(c => c.status === "online").length
+      
+      return NextResponse.json({
+        success: true,
+        status: realSystemStatus,
+        models: modelsResult.models || []
+      })
+      
+    } catch (grpcError: any) {
+      console.error('Real gRPC status check failed:', grpcError)
+      
+      // Return error with helpful message
+      return NextResponse.json({
+        success: false,
+        error: `Failed to get real status from Pi: ${grpcError.message}`,
+        status: {
+          timestamp: new Date().toISOString(),
+          total_clients: 0,
+          active_clients: 0,
+          total_models_deployed: 0,
+          active_tasks: 0,
+          completed_tasks: 0,
+          available_models: [],
+          clients: []
         },
-        {
-          client_id: "client-002-work-laptop",
-          hostname: "work-laptop",
-          ip_address: "192.168.1.102",
-          performance_score: 45.8,
-          deployed_models: ["dhenu2-1b-instruct", "yolo-v8"],
-          current_tasks: 0,
-          last_seen: Date.now() / 1000,
-          status: "online",
-          specs: {
-            cpu_cores: 4,
-            cpu_frequency_ghz: 2.8,
-            ram_gb: 16,
-            gpu_info: "Intel Integrated",
-            gpu_memory_gb: 0,
-            os_info: "Windows 11",
-            performance_score: 45.8
-          }
-        }
-      ]
+        models: []
+      }, { status: 500 })
     }
     
-    const mockModels = [
-      {
-        model_name: "llama-3.2-11b-vision",
-        model_type: "huggingface",
-        status: "running",
-        endpoint_url: "http://192.168.1.101:8001",
-        client_id: "client-001-gaming-laptop",
-        performance_score: 85.2
-      },
-      {
-        model_name: "dhenu2-1b-instruct",
-        model_type: "huggingface",
-        status: "running",
-        endpoint_url: "http://192.168.1.102:8002",
-        client_id: "client-002-work-laptop",
-        performance_score: 45.8
-      },
-      {
-        model_name: "dhenu2-3b-instruct",
-        model_type: "huggingface",
-        status: "not_deployed",
-        endpoint_url: "",
-        client_id: "",
-        performance_score: 0
-      },
-      {
-        model_name: "dhenu2-8b-instruct",
-        model_type: "huggingface",
-        status: "running",
-        endpoint_url: "http://192.168.1.101:8004",
-        client_id: "client-001-gaming-laptop",
-        performance_score: 85.2
-      },
-      {
-        model_name: "yolo-v8",
-        model_type: "pytorch",
-        status: "running",
-        endpoint_url: "http://192.168.1.102:8081",
-        client_id: "client-002-work-laptop",
-        performance_score: 45.8
-      }
-    ]
-    
-    return NextResponse.json({
-      success: true,
-      status: mockSystemStatus,
-      models: mockModels
-    })
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('Status check error:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to get system status' 
+      error: `Failed to get system status: ${error.message}`,
+      status: {
+        timestamp: new Date().toISOString(),
+        total_clients: 0,
+        active_clients: 0,
+        total_models_deployed: 0,
+        active_tasks: 0,
+        completed_tasks: 0,
+        available_models: [],
+        clients: []
+      },
+      models: []
     }, { status: 500 })
   }
+}
+
+function extractIPFromEndpoint(endpoint_url: string): string {
+  try {
+    if (!endpoint_url) return "Unknown"
+    const url = new URL(endpoint_url)
+    return url.hostname
+  } catch {
+    // Try to extract IP with regex if URL parsing fails
+    const match = endpoint_url.match(/(\d+\.\d+\.\d+\.\d+)/)
+    return match ? match[1] : "Unknown"
+  }
+}
+
+async function callRealGRPCClient(action: string, params: any): Promise<any> {
+  const grpc = require('@grpc/grpc-js')
+  const protoLoader = require('@grpc/proto-loader')
+  const path = require('path')
+  const fs = require('fs')
+
+  return new Promise((resolve, reject) => {
+    try {
+      // Find the proto file
+      const possibleProtoPaths = [
+        path.join(process.cwd(), 'load_balancer.proto'),
+        path.join(process.cwd(), '..', 'LB', 'load_balancer.proto'),
+        path.join(process.cwd(), '..', 'load_balancer.proto')
+      ]
+
+      let protoPath = null
+      for (const p of possibleProtoPaths) {
+        if (fs.existsSync(p)) {
+          protoPath = p
+          break
+        }
+      }
+
+      if (!protoPath) {
+        reject(new Error('Proto file not found'))
+        return
+      }
+
+      console.log(`Using proto file: ${protoPath}`)
+
+      // Load the proto file
+      const packageDefinition = protoLoader.loadSync(protoPath, {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+      })
+
+      const protoDescriptor = grpc.loadPackageDefinition(packageDefinition)
+      const LoadBalancer = protoDescriptor.loadbalancer.LoadBalancer
+
+      // Create client
+      const client = new LoadBalancer(params.server_address, grpc.credentials.createInsecure())
+
+      // Set deadline
+      const deadline = new Date()
+      deadline.setSeconds(deadline.getSeconds() + 15)
+
+      if (action === 'health_check') {
+        client.HealthCheck({}, { deadline }, (error: any, response: any) => {
+          if (error) {
+            console.error('gRPC Health Check Error:', error)
+            reject(error)
+          } else {
+            console.log('gRPC Health Check Success:', response)
+            resolve({
+              success: true,
+              health: {
+                healthy: response.healthy,
+                message: response.message,
+                timestamp: response.timestamp
+              }
+            })
+          }
+          client.close()
+        })
+      } else if (action === 'get_models') {
+        client.GetAvailableModels({}, { deadline }, (error: any, response: any) => {
+          if (error) {
+            console.error('gRPC Get Models Error:', error)
+            reject(error)
+          } else {
+            console.log('gRPC Get Models Success:', response)
+            
+            const models = response.models.map((model: any) => ({
+              model_name: model.model_name,
+              model_type: model.model_type,
+              status: model.status,
+              endpoint_url: model.endpoint_url,
+              client_id: model.client_id,
+              performance_score: model.performance_score
+            }))
+            
+            resolve({
+              success: true,
+              models: models
+            })
+          }
+          client.close()
+        })
+      } else {
+        reject(new Error(`Unknown action: ${action}`))
+      }
+
+    } catch (error) {
+      console.error('gRPC Status Client Error:', error)
+      reject(error)
+    }
+  })
 }
 
 async function callPythonGRPCClient(action: string, params: any): Promise<any> {

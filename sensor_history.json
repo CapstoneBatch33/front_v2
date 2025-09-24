@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:55:04.805Z",
+    "datetime": "25/9/2025, 1:25:04 am",
+    "temperature": 22,
+    "humidity": 66,
+    "soil_moisture": 33,
+    "ph_level": 5.3,
+    "co2": 556,
+    "light": 902,
+    "location": "Farm Dashboard",
+    "notes": "hhh"
+  }
+]

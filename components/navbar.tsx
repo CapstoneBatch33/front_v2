@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { name: "Home", path: "/" },
   { name: "Dashboard", path: "/dashboard" },
+  { name: "Sensor History", path: "/sensor-history" },
   { name: "AI Chatbot", path: "/chatbot" },
   { name: "Load Balancer", path: "/test_loadBalancer" },
   { name: "Team", path: "/team" },
