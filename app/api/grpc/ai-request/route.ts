@@ -1,95 +1,134 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { spawn } from 'child_process'
-import path from 'path'
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { server_address, model_name, prompt, parameters, input_type, input_data } = await request.json()
-    
+    const { server_address, model_name, prompt, parameters } = await request.json();
+
     if (!server_address || !model_name || !prompt) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing required parameters' 
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Server address, model name, and prompt are required",
+        },
+        { status: 400 }
+      );
     }
 
-    // Call Python gRPC client for AI request
-    const result = await callPythonGRPCClient('ai_request', { 
-      server_address,
-      model_name,
-      prompt,
-      parameters: parameters || {},
-      input_type: input_type || 'text',
-      input_data: input_data || ''
-    })
-    
-    return NextResponse.json(result)
-    
-  } catch (error) {
-    console.error('AI request error:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to process AI request' 
-    }, { status: 500 })
+    console.log(`Making REAL AI request to: ${server_address} with model: ${model_name}`);
+
+    // Use the real gRPC client to make AI request
+    try {
+      const grpcResult = await callRealGRPCClient("ai_request", { 
+        server_address, 
+        model_name, 
+        prompt, 
+        parameters: parameters || {} 
+      });
+      return NextResponse.json(grpcResult);
+    } catch (grpcError: any) {
+      console.error("gRPC AI request failed:", grpcError);
+      
+      return NextResponse.json({
+        success: false,
+        error: `AI request failed: ${grpcError.message}`,
+        response_text: `Error: ${grpcError.message}`
+      }, { status: 500 });
+    }
+  } catch (error: any) {
+    console.error("AI request error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: `AI request failed: ${error.message}`,
+        response_text: `Error: ${error.message}`
+      },
+      { status: 500 }
+    );
   }
 }
 
-async function callPythonGRPCClient(action: string, params: any): Promise<any> {
+async function callRealGRPCClient(action: string, params: any): Promise<any> {
+  const grpc = require('@grpc/grpc-js');
+  const protoLoader = require('@grpc/proto-loader');
+  const path = require('path');
+  const fs = require('fs');
+
   return new Promise((resolve, reject) => {
-    const pythonScript = path.join(process.cwd(), '..', 'scripts', 'grpc_bridge.py')
-    
-    // Try to use virtual environment python first
-    const pythonCommands = [
-      path.join(process.cwd(), '..', 'venv', 'bin', 'python'),
-      path.join(process.cwd(), '..', 'venv', 'Scripts', 'python.exe'),
-      'python3',
-      'python'
-    ]
-    
-    let pythonCmd = 'python3'
-    for (const cmd of pythonCommands) {
-      try {
-        if (require('fs').existsSync(cmd)) {
-          pythonCmd = cmd
-          break
+    try {
+      // Find the proto file
+      const possibleProtoPaths = [
+        path.join(process.cwd(), 'load_balancer.proto'),
+        path.join(process.cwd(), '..', 'LB', 'load_balancer.proto'),
+        path.join(process.cwd(), '..', 'load_balancer.proto')
+      ];
+
+      let protoPath = null;
+      for (const p of possibleProtoPaths) {
+        if (fs.existsSync(p)) {
+          protoPath = p;
+          break;
         }
-      } catch (e) {}
-    }
-    
-    const python = spawn(pythonCmd, [pythonScript, action, JSON.stringify(params)], {
-      env: {
-        ...process.env,
-        PYTHONPATH: path.join(process.cwd(), '..'),
-        PATH: process.env.PATH
       }
-    })
-    
-    let stdout = ''
-    let stderr = ''
-    
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-    
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-    
-    python.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout)
-          resolve(result)
-        } catch (e) {
-          reject(new Error(`Failed to parse Python output: ${stdout}`))
-        }
+
+      if (!protoPath) {
+        reject(new Error('Proto file not found'));
+        return;
+      }
+
+      // Load the proto file
+      const packageDefinition = protoLoader.loadSync(protoPath, {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+      });
+
+      const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+      const LoadBalancer = protoDescriptor.loadbalancer.LoadBalancer;
+
+      // Create client
+      const client = new LoadBalancer(params.server_address, grpc.credentials.createInsecure());
+
+      // Set deadline (60 second timeout for AI requests)
+      const deadline = new Date();
+      deadline.setSeconds(deadline.getSeconds() + 60);
+
+      if (action === 'ai_request') {
+        const aiRequest = {
+          request_id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          model_name: params.model_name,
+          prompt: params.prompt,
+          parameters: params.parameters,
+          input_data: Buffer.from(''),
+          input_type: 'text'
+        };
+
+        client.ProcessAIRequest(aiRequest, { deadline }, (error: any, response: any) => {
+          if (error) {
+            console.error('gRPC AI Request Error:', error);
+            reject(error);
+          } else {
+            console.log('gRPC AI Request Success:', response);
+            
+            resolve({
+              success: response.success,
+              request_id: response.request_id,
+              response_text: response.response_text,
+              processing_time: response.processing_time,
+              model_used: response.model_used,
+              client_id: response.client_id
+            });
+          }
+          client.close();
+        });
       } else {
-        reject(new Error(`Python script failed: ${stderr}`))
+        reject(new Error(`Unknown action: ${action}`));
       }
-    })
-    
-    python.on('error', (error) => {
-      reject(new Error(`Failed to start Python script: ${error.message}`))
-    })
-  })
+
+    } catch (error) {
+      console.error('gRPC AI Request Client Error:', error);
+      reject(error);
+    }
+  });
 }
