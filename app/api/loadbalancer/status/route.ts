@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     
     // Use the real gRPC status endpoint instead of hardcoded data
     try {
-      const response = await fetch('http://localhost:3000/api/grpc/status', {
+      const response = await fetch('/api/grpc/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

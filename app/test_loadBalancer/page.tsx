@@ -169,9 +169,22 @@ export default function LoadBalancerTestPage() {
       
       const data = await response.json()
       
+      console.log('📊 Status API Response:', data) // Debug log
+      
       if (data.success) {
+        console.log('✅ Status data received:', data.status) // Debug log
+        console.log('👥 Clients in response:', data.status?.total_clients) // Debug log
+        
         setSystemStatus(data.status)
         setAvailableModels(data.models || [])
+        
+        // Force UI update
+        if (data.status?.total_clients > 0) {
+          toast.success(`Connected! Found ${data.status.total_clients} clients`)
+        }
+      } else {
+        console.log('❌ Status API error:', data.error) // Debug log
+        toast.error(`Status error: ${data.error}`)
       }
     } catch (error) {
       toast.error(`Failed to refresh status: ${error}`)

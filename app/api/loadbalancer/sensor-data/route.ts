@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     
     // Use the real gRPC sensor data endpoint instead of hardcoded processing
     try {
-      const response = await fetch('http://localhost:3000/api/grpc/sensor-data', {
+      const response = await fetch('/api/grpc/sensor-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

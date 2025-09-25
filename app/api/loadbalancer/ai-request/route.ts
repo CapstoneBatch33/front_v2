@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     
     // Use the real gRPC AI request endpoint instead of hardcoded responses
     try {
-      const response = await fetch('http://localhost:3000/api/grpc/ai-request', {
+      const response = await fetch('/api/grpc/ai-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

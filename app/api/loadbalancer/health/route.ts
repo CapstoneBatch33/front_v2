@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     
     // Use the real gRPC health endpoint instead of hardcoded data
     try {
-      const response = await fetch('http://localhost:3000/api/grpc/health', {
+      const response = await fetch('/api/grpc/health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
