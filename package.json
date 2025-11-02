@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --dir src"
+    "lint": "next lint --dir src",
+    "start-all": "node enhanced_start_all.js",
+    "start-pi": "python pi_server.py",
+    "start-backend": "node enhanced_server.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.2",

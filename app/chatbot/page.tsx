@@ -10,14 +10,41 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { classifyImage, loadModel } from "@/lib/model-loader"
 
-// Mock sensor data
-const sensorData = {
-  moisture: 42,
-  temperature: 24,
-  pH: 6.2,
-  co2: 450,
-  light: 850,
-  humidity: 65,
+// Function to fetch real sensor data
+const fetchSensorData = async () => {
+  try {
+    const response = await fetch('/api/sensor-data')
+    const result = await response.json()
+    
+    if (result.success) {
+      return {
+        moisture: result.data.soil_moisture || 42,
+        temperature: result.data.temperature || 24,
+        pH: result.data.ph_level || 6.2,
+        co2: result.data.co2 || 450,
+        light: result.data.light || 850,
+        humidity: result.data.humidity || 65,
+        nitrogen: result.data.nitrogen || 50,
+        phosphorus: result.data.phosphorus || 30,
+        potassium: result.data.potassium || 80
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching sensor data:', error)
+  }
+  
+  // Fallback to default values
+  return {
+    moisture: 42,
+    temperature: 24,
+    pH: 6.2,
+    co2: 450,
+    light: 850,
+    humidity: 65,
+    nitrogen: 50,
+    phosphorus: 30,
+    potassium: 80
+  }
 }
 
 // Mock AI responses
@@ -25,15 +52,17 @@ const mockResponses: Record<string, string> = {
   default: "I'm your Smart Farming Assistant. How can I help you today?",
   greeting:
     "Hello there, farmer! I'm your digital farming companion, ready to help your crops thrive. Ask me about soil conditions, pest management, or anything else happening in your fields! 🌱",
-  moisture: `Based on your current soil moisture reading of ${sensorData.moisture}%, your soil is in the optimal range. No irrigation is needed at this time. I recommend checking again tomorrow morning. Remember: happy soil, happy plants!`,
-  temperature: `The current temperature is ${sensorData.temperature}°C, which is ideal for most crops. Your plants are enjoying this weather! If temperatures rise above 28°C, consider providing some shade for your more sensitive green friends.`,
-  pH: `Your soil pH is currently ${sensorData.pH}, which is slightly acidic. This is perfect for crops like potatoes, tomatoes, and blueberries. They'll be thriving in these conditions! For crops that prefer more neutral soil, consider adding a bit of agricultural lime.`,
+  moisture: "Based on your current soil moisture reading, your soil is in the optimal range. No irrigation is needed at this time. I recommend checking again tomorrow morning. Remember: happy soil, happy plants!",
+  temperature: "The current temperature is ideal for most crops. Your plants are enjoying this weather! If temperatures rise above 28°C, consider providing some shade for your more sensitive green friends.",
+  pH: "Your soil pH is slightly acidic, which is perfect for crops like potatoes, tomatoes, and blueberries. They'll be thriving in these conditions! For crops that prefer more neutral soil, consider adding a bit of agricultural lime.",
   crops:
     "For your region and current season, I recommend planting: \n\n1. Maize/Corn - Thrives in your warm weather and will make excellent use of your soil conditions\n2. Tomatoes - Perfect match for your soil pH, and they'll love the current temperature range\n3. Leafy greens - Quick harvest cycle and great for crop rotation\n\nWould you like specific planting instructions for any of these green companions?",
   pests:
     "Based on your region and current conditions, keep your eyes peeled for these common troublemakers:\n\n1. Aphids - The tiny thieves that love to gather on the undersides of leaves\n2. Corn borers - Sneaky pests that leave small holes in stalks as their calling card\n3. Spider mites - These become more common in dry conditions, like tiny drought-loving ninjas\n\nWould you like some organic control methods to keep these visitors in check?",
   fertilizer:
     "Based on your soil data, I recommend a balanced NPK fertilizer (10-10-10) applied at 2.5kg per 100 square meters. Think of it as a nutritious feast for your soil! Apply in the early morning or evening for best results, when your plants are most ready to enjoy their meal.",
+  plantDisease:
+    "Let me analyze this plant image for you! I can detect various plant diseases and provide treatment recommendations.",
 }
 
 interface Message {
@@ -62,6 +91,7 @@ export default function ChatbotPage() {
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [isProcessingImage, setIsProcessingImage] = useState(false)
+  const [currentSensorData, setCurrentSensorData] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState([
@@ -92,10 +122,16 @@ export default function ChatbotPage() {
     "Regular scanning of plant leaves can help detect diseases before they spread to the entire crop.",
   ]
 
-  // Load the model when the component mounts
+  // Load the model and fetch sensor data when the component mounts
   useEffect(() => {
     loadModel().catch(err => console.error("Error loading model:", err));
+    fetchInitialSensorData();
   }, []);
+
+  const fetchInitialSensorData = async () => {
+    const sensorData = await fetchSensorData();
+    setCurrentSensorData(sensorData);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -115,7 +151,7 @@ export default function ChatbotPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return
 
     const userMessage: Message = {
@@ -126,47 +162,64 @@ export default function ChatbotPage() {
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const currentInput = input
     setInput("")
     setIsTyping(true)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Call the real AI assistant API
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: currentInput }),
+      })
+
+      const result = await response.json()
+
+      if (result.answer) {
+        // Update sensor data if provided
+        if (result.sensorData) {
+          setCurrentSensorData(result.sensorData)
+        }
+
+        const botMessage: Message = {
+          id: Date.now().toString(),
+          content: result.answer,
+          sender: "bot",
+          timestamp: new Date(),
+          withData: currentInput.toLowerCase().includes("moisture") || 
+                   currentInput.toLowerCase().includes("temperature") || 
+                   currentInput.toLowerCase().includes("ph") ||
+                   currentInput.toLowerCase().includes("sensor"),
+        }
+
+        setMessages((prev) => [...prev, botMessage])
+
+        // Update suggestions based on category
+        if (result.category) {
+          updateSuggestionsBasedOnCategory(result.category)
+        }
+      } else {
+        throw new Error('No response from AI assistant')
+      }
+    } catch (error) {
+      console.error('Error calling AI assistant:', error)
+      
+      // Fallback to mock response
       let responseContent = mockResponses.default
       let withData = false
 
-      if (input.toLowerCase().includes("moisture") || input.toLowerCase().includes("water")) {
-        responseContent = mockResponses.moisture
+      if (currentInput.toLowerCase().includes("moisture") || currentInput.toLowerCase().includes("water")) {
+        responseContent = `Based on your current soil moisture reading of ${currentSensorData?.moisture || 42}%, your soil is in the optimal range. No irrigation is needed at this time.`
         withData = true
-      } else if (
-        input.toLowerCase().includes("temperature") ||
-        input.toLowerCase().includes("hot") ||
-        input.toLowerCase().includes("cold")
-      ) {
-        responseContent = mockResponses.temperature
+      } else if (currentInput.toLowerCase().includes("temperature")) {
+        responseContent = `The current temperature is ${currentSensorData?.temperature || 24}°C, which is ideal for most crops.`
         withData = true
-      } else if (
-        input.toLowerCase().includes("ph") ||
-        input.toLowerCase().includes("acid") ||
-        input.toLowerCase().includes("soil")
-      ) {
-        responseContent = mockResponses.pH
+      } else if (currentInput.toLowerCase().includes("ph")) {
+        responseContent = `Your soil pH is currently ${currentSensorData?.pH || 6.2}, which is slightly acidic and good for most crops.`
         withData = true
-      } else if (
-        input.toLowerCase().includes("crop") ||
-        input.toLowerCase().includes("plant") ||
-        input.toLowerCase().includes("grow")
-      ) {
-        responseContent = mockResponses.crops
-      } else if (
-        input.toLowerCase().includes("pest") ||
-        input.toLowerCase().includes("bug") ||
-        input.toLowerCase().includes("insect")
-      ) {
-        responseContent = mockResponses.pests
-      } else if (input.toLowerCase().includes("fertilizer") || input.toLowerCase().includes("nutrient")) {
-        responseContent = mockResponses.fertilizer
-      } else if (input.toLowerCase().includes("hello") || input.toLowerCase().includes("hi")) {
-        responseContent = mockResponses.greeting
       }
 
       const botMessage: Message = {
@@ -178,25 +231,45 @@ export default function ChatbotPage() {
       }
 
       setMessages((prev) => [...prev, botMessage])
-      setIsTyping(false)
+    }
 
-      // Update suggestions based on context
-      if (input.toLowerCase().includes("moisture")) {
+    setIsTyping(false)
+  }
+
+  const updateSuggestionsBasedOnCategory = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'irrigation related':
         setSuggestions([
           "When should I water my crops?",
           "What's the ideal soil moisture?",
           "How to improve water retention?",
           "Show me irrigation recommendations",
         ])
-      } else if (input.toLowerCase().includes("crop") || input.toLowerCase().includes("plant")) {
+        break
+      case 'soil nutrition':
         setSuggestions([
-          "What's the best planting depth?",
-          "How far apart should I plant?",
-          "When will they be ready to harvest?",
-          "What nutrients do they need?",
+          "What fertilizer should I use?",
+          "How to improve soil nutrients?",
+          "What's my NPK levels?",
+          "Organic vs synthetic fertilizers?",
         ])
-      }
-    }, 1500)
+        break
+      case 'disease detection':
+        setSuggestions([
+          "Scan a plant leaf for diseases",
+          "Common plant diseases in my area?",
+          "How to prevent plant diseases?",
+          "Organic disease treatments?",
+        ])
+        break
+      default:
+        setSuggestions([
+          "Best crops for this season?",
+          "What's my soil moisture level?",
+          "Help me with common pests?",
+          "What fertilizer should I use?",
+        ])
+    }
   }
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,22 +476,22 @@ export default function ChatbotPage() {
                                 )}
                                 
                                 {/* Display sensor data visualization if applicable */}
-                                {message.withData && (
+                                {message.withData && currentSensorData && (
                                   <div className="mt-3 grid grid-cols-3 gap-2">
                                     <div className="bg-background/80 p-2 rounded flex flex-col items-center">
                                       <Droplets className="h-5 w-5 text-blue-500 mb-1" />
                                       <span className="text-xs text-muted-foreground">Moisture</span>
-                                      <span className="font-medium">{sensorData.moisture}%</span>
+                                      <span className="font-medium">{currentSensorData.moisture}%</span>
                                     </div>
                                     <div className="bg-background/80 p-2 rounded flex flex-col items-center">
                                       <Thermometer className="h-5 w-5 text-red-500 mb-1" />
                                       <span className="text-xs text-muted-foreground">Temp</span>
-                                      <span className="font-medium">{sensorData.temperature}°C</span>
+                                      <span className="font-medium">{currentSensorData.temperature}°C</span>
                                     </div>
                                     <div className="bg-background/80 p-2 rounded flex flex-col items-center">
                                       <Leaf className="h-5 w-5 text-green-500 mb-1" />
                                       <span className="text-xs text-muted-foreground">pH</span>
-                                      <span className="font-medium">{sensorData.pH}</span>
+                                      <span className="font-medium">{currentSensorData.pH}</span>
                                     </div>
                                   </div>
                                 )}

@@ -14,8 +14,47 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 
-// Mock data for sensors
-const generateMockData = () => {
+// Function to fetch real sensor data from backend
+const fetchCurrentSensorData = async () => {
+  try {
+    const response = await fetch('/api/sensor-data')
+    const result = await response.json()
+    
+    if (result.success) {
+      return {
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        moisture: result.data.soil_moisture || 45,
+        temperature: result.data.temperature || 22,
+        pH: result.data.ph_level?.toString() || "6.5",
+        co2: result.data.co2 || 450,
+        light: result.data.light || 800,
+        humidity: result.data.humidity || 65,
+        nitrogen: result.data.nitrogen || 50,
+        phosphorus: result.data.phosphorus || 30,
+        potassium: result.data.potassium || 80
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching sensor data:', error)
+  }
+  
+  // Fallback to default values
+  return {
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    moisture: 45,
+    temperature: 22,
+    pH: "6.5",
+    co2: 450,
+    light: 800,
+    humidity: 65,
+    nitrogen: 50,
+    phosphorus: 30,
+    potassium: 80
+  }
+}
+
+// Generate initial mock data for charts (24 hours)
+const generateInitialMockData = () => {
   const now = new Date()
   const data = []
 
@@ -25,12 +64,12 @@ const generateMockData = () => {
 
     data.push({
       time: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      moisture: Math.floor(Math.random() * 20) + 30, // 30-50%
-      temperature: Math.floor(Math.random() * 10) + 18, // 18-28°C
-      pH: (Math.random() * 2 + 5).toFixed(1), // 5.0-7.0
-      co2: Math.floor(Math.random() * 200) + 400, // 400-600 ppm
-      light: Math.floor(Math.random() * 500) + 500, // 500-1000 lux
-      humidity: Math.floor(Math.random() * 30) + 40, // 40-70%
+      moisture: Math.floor(Math.random() * 20) + 30,
+      temperature: Math.floor(Math.random() * 10) + 18,
+      pH: (Math.random() * 2 + 5).toFixed(1),
+      co2: Math.floor(Math.random() * 200) + 400,
+      light: Math.floor(Math.random() * 500) + 500,
+      humidity: Math.floor(Math.random() * 30) + 40,
     })
   }
 
@@ -69,7 +108,8 @@ const getStatusText = (color: string) => {
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState(generateMockData())
+  const [data, setData] = useState(generateInitialMockData())
+  const [currentSensorData, setCurrentSensorData] = useState<any>(null)
   const [alerts, setAlerts] = useState<string[]>([])
   const [weatherCondition, setWeatherCondition] = useState("sunny")
   const [tractorPosition, setTractorPosition] = useState(0)
@@ -84,46 +124,59 @@ export default function Dashboard() {
   const [timestampNotes, setTimestampNotes] = useState("")
   const [sensorHistory, setSensorHistory] = useState<any[]>([])
   const [aiAnalysis, setAiAnalysis] = useState<any>(null)
+  
+  // Connection status
+  const [piConnectionStatus, setPiConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
 
-  // Current values (last data point)
-  const currentValues = data[data.length - 1]
+  // Current values (use real sensor data if available, otherwise last data point)
+  const currentValues = currentSensorData || data[data.length - 1]
 
   // Load sensor history on component mount
   useEffect(() => {
     loadSensorHistory()
+    fetchRealSensorData() // Initial fetch
   }, [])
 
-  // Update data every 5 seconds
+  // Fetch real sensor data from Pi
+  const fetchRealSensorData = async () => {
+    try {
+      setPiConnectionStatus('checking')
+      const sensorData = await fetchCurrentSensorData()
+      setCurrentSensorData(sensorData)
+      setPiConnectionStatus('connected')
+      
+      // Update chart data with real sensor reading
+      setData(prevData => [
+        ...prevData.slice(1),
+        sensorData
+      ])
+      
+    } catch (error) {
+      console.error('Failed to fetch real sensor data:', error)
+      setPiConnectionStatus('disconnected')
+    }
+  }
+
+  // Update data every 10 seconds (real sensor data + chart updates)
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newData = [
-        ...data.slice(1),
-        {
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          moisture: Math.floor(Math.random() * 20) + 30,
-          temperature: Math.floor(Math.random() * 10) + 18,
-          pH: (Math.random() * 2 + 5).toFixed(1),
-          co2: Math.floor(Math.random() * 200) + 400,
-          light: Math.floor(Math.random() * 500) + 500,
-          humidity: Math.floor(Math.random() * 30) + 40,
-        },
-      ]
+    const interval = setInterval(async () => {
+      // Fetch real sensor data
+      await fetchRealSensorData()
 
-      setData(newData)
-
-      // Check for alerts
-      const latest = newData[newData.length - 1]
+      // Check for alerts using current values
+      const latest = currentValues
       if (latest.moisture < 35) {
         setAlerts((prev) => [...prev, `Low soil moisture detected: ${latest.moisture}%`])
       }
       if (latest.temperature > 25) {
         setAlerts((prev) => [...prev, `High temperature detected: ${latest.temperature}°C`])
       }
+      if (latest.pH && parseFloat(latest.pH) < 6.0) {
+        setAlerts((prev) => [...prev, `Low soil pH detected: ${latest.pH}`])
+      }
 
       // Limit alerts to last 5
-      if (alerts.length > 5) {
-        setAlerts(alerts.slice(-5))
-      }
+      setAlerts(prev => prev.slice(-5))
 
       // Update weather condition randomly
       if (Math.random() > 0.9) {
@@ -133,10 +186,10 @@ export default function Dashboard() {
 
       // Move tractor
       setTractorPosition((prev) => (prev + 5) % 100)
-    }, 5000)
+    }, 10000) // 10 seconds
 
     return () => clearInterval(interval)
-  }, [data, alerts])
+  }, [currentValues])
 
   // Load balancer connection test
   const testConnection = async () => {
@@ -336,31 +389,70 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Load Balancer Connection */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isConnected ? <Wifi className="h-5 w-5 text-green-500" /> : <WifiOff className="h-5 w-5 text-red-500" />}
-            AI Load Balancer Connection
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Input
-              placeholder="Raspberry Pi IP:Port"
-              value={serverAddress}
-              onChange={(e) => setServerAddress(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={testConnection} disabled={isLoading}>
-              {isLoading ? "Connecting..." : "Connect"}
-            </Button>
-            <Badge variant={isConnected ? "default" : "destructive"}>
-              {isConnected ? "Connected" : "Disconnected"}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Connection Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {piConnectionStatus === 'connected' ? 
+                <Wifi className="h-5 w-5 text-green-500" /> : 
+                piConnectionStatus === 'checking' ?
+                <Wifi className="h-5 w-5 text-yellow-500 animate-pulse" /> :
+                <WifiOff className="h-5 w-5 text-red-500" />
+              }
+              Raspberry Pi Connection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Badge variant={
+                  piConnectionStatus === 'connected' ? "default" : 
+                  piConnectionStatus === 'checking' ? "secondary" : 
+                  "destructive"
+                }>
+                  {piConnectionStatus === 'connected' ? "Connected" : 
+                   piConnectionStatus === 'checking' ? "Checking..." : 
+                   "Disconnected"}
+                </Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {piConnectionStatus === 'connected' ? "Receiving real sensor data" : 
+                   piConnectionStatus === 'checking' ? "Testing connection..." : 
+                   "Using simulated data"}
+                </p>
+              </div>
+              <Button onClick={fetchRealSensorData} variant="outline" size="sm">
+                Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {isConnected ? <Wifi className="h-5 w-5 text-green-500" /> : <WifiOff className="h-5 w-5 text-red-500" />}
+              AI Load Balancer
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Input
+                placeholder="Load Balancer IP:Port"
+                value={serverAddress}
+                onChange={(e) => setServerAddress(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={testConnection} disabled={isLoading} size="sm">
+                {isLoading ? "Connecting..." : "Connect"}
+              </Button>
+              <Badge variant={isConnected ? "default" : "destructive"}>
+                {isConnected ? "Connected" : "Disconnected"}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Timestamping Section */}
       <Card className="mb-6">
