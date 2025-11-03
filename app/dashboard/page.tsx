@@ -242,7 +242,7 @@ export default function Dashboard() {
       setCurrentSensorData(sensorData)
       
       // Check if we got real ESP32 data or mock data
-      if (sensorData.source === 'esp32') {
+      if (sensorData.source === 'esp32' || sensorData.source === 'esp32_via_python') {
         setSensorConnectionStatus('connected')
         setLastDataReceived(new Date())
       } else {
@@ -1320,42 +1320,42 @@ export default function Dashboard() {
       <Dialog open={showConnectionSettings} onOpenChange={setShowConnectionSettings}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>ESP32 Connection Settings</DialogTitle>
+            <DialogTitle>Sensor Connection Settings</DialogTitle>
             <DialogDescription>
-              Configure your ESP32 sensor connection. Make sure your ESP32 is on the same network as your laptop.
+              Configure your sensor data connection. Currently connecting to Python server that receives ESP32 data.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="esp32-ip">ESP32 IP Address</Label>
+              <Label htmlFor="server-ip">Python Server IP Address</Label>
               <Input
-                id="esp32-ip"
+                id="server-ip"
                 value={esp32Settings.ip}
                 onChange={(e) => setEsp32Settings(prev => ({ ...prev, ip: e.target.value }))}
-                placeholder="192.168.1.100"
+                placeholder="192.168.1.152"
               />
               <p className="text-xs text-muted-foreground">
-                Find your ESP32's IP address from your router's admin panel or serial monitor
+                IP address of the server receiving ESP32 data
               </p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="esp32-port">ESP32 Port</Label>
+              <Label htmlFor="server-port">Python Server Port</Label>
               <Input
-                id="esp32-port"
+                id="server-port"
                 value={esp32Settings.port}
                 onChange={(e) => setEsp32Settings(prev => ({ ...prev, port: e.target.value }))}
-                placeholder="80"
+                placeholder="5000"
               />
             </div>
 
             <div className="bg-blue-50 p-3 rounded-lg text-sm">
-              <p className="font-medium text-blue-800 mb-1">Setup Instructions:</p>
+              <p className="font-medium text-blue-800 mb-1">Current Setup:</p>
               <ol className="text-blue-700 space-y-1 list-decimal list-inside">
-                <li>Ensure ESP32 is connected to your WiFi network</li>
-                <li>ESP32 should serve sensor data at: <code>http://[IP]:[PORT]/sensor-data</code></li>
-                <li>Data should be in JSON format with fields: temperature, pH, moisture, etc.</li>
+                <li>ESP32 sends data to Python server (192.168.1.152:5000)</li>
+                <li>Dashboard connects to Python server to get latest data</li>
+                <li>Python server should have GET endpoint: <code>/sensor-data</code></li>
               </ol>
             </div>
 

@@ -1,38 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// ESP32 connection settings
-const ESP32_IP = process.env.ESP32_IP || '192.168.1.100' // Change this to your ESP32's IP
-const ESP32_PORT = process.env.ESP32_PORT || '80'
+// Python server connection settings (receives data from ESP32)
+const PYTHON_SERVER_IP = process.env.PYTHON_SERVER_IP || '192.168.1.152' // Your Python server IP
+const PYTHON_SERVER_PORT = process.env.PYTHON_SERVER_PORT || '5000' // Your Python server port
 
 export async function GET(request: NextRequest) {
   try {
-    // Try to fetch from ESP32 first
+    // Try to fetch from Python server (which receives ESP32 data)
     try {
-      const esp32Response = await fetch(`http://${ESP32_IP}:${ESP32_PORT}/sensor-data`, {
+      const pythonResponse = await fetch(`http://${PYTHON_SERVER_IP}:${PYTHON_SERVER_PORT}/sensor-data`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(3000) // 3 second timeout for ESP32
+        signal: AbortSignal.timeout(2000) // 2 second timeout for Python server
       })
       
-      if (esp32Response.ok) {
-        const esp32Data = await esp32Response.json()
+      if (pythonResponse.ok) {
+        const sensorData = await pythonResponse.json()
         return NextResponse.json({
           success: true,
-          source: 'esp32',
+          source: 'esp32_via_python',
           data: {
-            temperature: parseFloat(esp32Data.temperature) || 22,
-            ph_level: parseFloat(esp32Data.pH || esp32Data.ph_level) || 6.5,
-            soil_moisture: parseFloat(esp32Data.moisture || esp32Data.soil_moisture) || 45,
-            nitrogen: parseFloat(esp32Data.nitrogen) || 50,
-            phosphorus: parseFloat(esp32Data.phosphorus) || 30,
-            potassium: parseFloat(esp32Data.potassium) || 80,
-            humidity: parseFloat(esp32Data.humidity) || 65,
-            timestamp: esp32Data.timestamp || new Date().toISOString()
+            temperature: parseFloat(sensorData.temperature) || 22,
+            ph_level: parseFloat(sensorData.pH || sensorData.ph_level) || 6.5,
+            soil_moisture: parseFloat(sensorData.moisture || sensorData.soil_moisture) || 45,
+            nitrogen: parseFloat(sensorData.nitrogen) || 50,
+            phosphorus: parseFloat(sensorData.phosphorus) || 30,
+            potassium: parseFloat(sensorData.potassium) || 80,
+            humidity: parseFloat(sensorData.humidity) || 65,
+            timestamp: sensorData.timestamp || new Date().toISOString()
           }
         })
       }
-    } catch (esp32Error) {
-      console.log('ESP32 connection failed:', esp32Error instanceof Error ? esp32Error.message : 'Unknown error')
+    } catch (pythonError) {
+      console.log('Python server connection failed:', pythonError instanceof Error ? pythonError.message : 'Unknown error')
     }
 
     // Fallback to mock data with realistic variations
