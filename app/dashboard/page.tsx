@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Brain, Wifi, WifiOff, Download, FileText } from "lucide-react"
+import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Wifi, WifiOff, Download, FileText, Settings } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
-// Function to fetch real sensor data from backend
+// Function to fetch real sensor data from ESP32 via backend
 const fetchCurrentSensorData = async () => {
   try {
     const response = await fetch('/api/sensor-data')
@@ -33,7 +33,8 @@ const fetchCurrentSensorData = async () => {
         humidity: result.data.humidity || 65,
         nitrogen: result.data.nitrogen || 50,
         phosphorus: result.data.phosphorus || 30,
-        potassium: result.data.potassium || 80
+        potassium: result.data.potassium || 80,
+        source: result.source || 'unknown' // Track data source
       }
     }
   } catch (error) {
@@ -51,7 +52,8 @@ const fetchCurrentSensorData = async () => {
     humidity: 65,
     nitrogen: 50,
     phosphorus: 30,
-    potassium: 80
+    potassium: 80,
+    source: 'fallback'
   }
 }
 
@@ -113,6 +115,13 @@ const getStatusText = (color: string) => {
   }
 }
 
+// Convert wind direction degrees to compass direction
+const getWindDirection = (degrees: number) => {
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+  const index = Math.round(degrees / 22.5) % 16
+  return directions[index]
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(generateInitialMockData())
   const [currentSensorData, setCurrentSensorData] = useState<any>(null)
@@ -121,15 +130,11 @@ export default function Dashboard() {
   const [tractorPosition, setTractorPosition] = useState(0)
   const [activeSensor, setActiveSensor] = useState<string | null>(null)
   
-  // Load balancer integration
-  const [serverAddress, setServerAddress] = useState("192.168.1.100:50051")
-  const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
   // Timestamping functionality
   const [timestampNotes, setTimestampNotes] = useState("")
   const [sensorHistory, setSensorHistory] = useState<any[]>([])
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null)
   
   // Health card generation
   const [isGeneratingHealthCard, setIsGeneratingHealthCard] = useState(false)
@@ -157,26 +162,94 @@ export default function Dashboard() {
   })
   
   // Connection status
-  const [piConnectionStatus, setPiConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+  const [sensorConnectionStatus, setSensorConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+  const [lastDataReceived, setLastDataReceived] = useState<Date | null>(null)
+  const [showConnectionSettings, setShowConnectionSettings] = useState(false)
+  const [esp32Settings, setEsp32Settings] = useState({
+    ip: '192.168.1.100',
+    port: '80'
+  })
+  
+  // Weather data state
+  const [weatherData, setWeatherData] = useState<any>(null)
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | 'checking'>('checking')
+  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
 
   // Current values (use real sensor data if available, otherwise last data point)
   const currentValues = currentSensorData || data[data.length - 1]
 
-  // Load sensor history on component mount
+  // Get user location and fetch weather data
+  const getUserLocation = async () => {
+    if (!navigator.geolocation) {
+      setLocationPermission('denied')
+      return
+    }
+
+    try {
+      setLocationPermission('checking')
+      
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes cache
+        })
+      })
+
+      const location = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude
+      }
+      
+      setUserLocation(location)
+      setLocationPermission('granted')
+      await fetchWeatherData(location.lat, location.lon)
+      
+    } catch (error) {
+      console.error('Location access denied or failed:', error)
+      setLocationPermission('denied')
+      // Fetch weather with mock location (London as fallback)
+      await fetchWeatherData(51.5074, -0.1278)
+    }
+  }
+
+  // Fetch weather data from API
+  const fetchWeatherData = async (lat: number, lon: number) => {
+    try {
+      const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setWeatherData(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch weather data:', error)
+    }
+  }
+
+  // Load sensor history and get location on component mount
   useEffect(() => {
     loadSensorHistory()
     fetchRealSensorData() // Initial fetch
+    getUserLocation() // Get location and weather data
   }, [])
 
-  // Fetch real sensor data from Pi
+  // Fetch real sensor data from ESP32 sensors
   const fetchRealSensorData = async () => {
     try {
-      setPiConnectionStatus('checking')
+      setSensorConnectionStatus('checking')
       const sensorData = await fetchCurrentSensorData()
       setCurrentSensorData(sensorData)
-      setPiConnectionStatus('connected')
       
-      // Update chart data with real sensor reading
+      // Check if we got real ESP32 data or mock data
+      if (sensorData.source === 'esp32') {
+        setSensorConnectionStatus('connected')
+        setLastDataReceived(new Date())
+      } else {
+        setSensorConnectionStatus('disconnected')
+      }
+      
+      // Update chart data with sensor reading
       setData(prevData => [
         ...prevData.slice(1),
         sensorData
@@ -184,11 +257,11 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error('Failed to fetch real sensor data:', error)
-      setPiConnectionStatus('disconnected')
+      setSensorConnectionStatus('disconnected')
     }
   }
 
-  // Update data every 10 seconds (real sensor data + chart updates)
+  // Update data every 5 seconds to match ESP32 transmission frequency
   useEffect(() => {
     const interval = setInterval(async () => {
       // Fetch real sensor data
@@ -209,45 +282,23 @@ export default function Dashboard() {
       // Limit alerts to last 5
       setAlerts(prev => prev.slice(-5))
 
-      // Update weather condition randomly
-      if (Math.random() > 0.9) {
+      // Update weather data periodically (every 5 minutes)
+      if (Math.random() > 0.98 && userLocation) { // Very low chance to avoid too many API calls
+        fetchWeatherData(userLocation.lat, userLocation.lon)
+      } else if (!weatherData && Math.random() > 0.9) {
+        // Fallback: Update weather condition randomly if no real data
         const conditions = ["sunny", "cloudy", "rainy"]
         setWeatherCondition(conditions[Math.floor(Math.random() * conditions.length)])
       }
 
       // Move tractor
       setTractorPosition((prev) => (prev + 5) % 100)
-    }, 10000) // 10 seconds
+    }, 5000) // 5 seconds to match ESP32 transmission
 
     return () => clearInterval(interval)
   }, [currentValues])
 
-  // Load balancer connection test
-  const testConnection = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/grpc/health', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ server_address: serverAddress })
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setIsConnected(true)
-        toast.success("Connected to AI Load Balancer!")
-      } else {
-        setIsConnected(false)
-        toast.error(`Connection failed: ${data.error}`)
-      }
-    } catch (error) {
-      setIsConnected(false)
-      toast.error(`Connection error: ${error}`)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+
 
   // Load sensor history
   const loadSensorHistory = async () => {
@@ -437,11 +488,6 @@ export default function Dashboard() {
         toast.success("Sensor reading timestamped successfully!")
         setTimestampNotes("")
         loadSensorHistory()
-        
-        // Send to AI load balancer for analysis if connected
-        if (isConnected) {
-          await analyzeWithAI(currentReading)
-        }
       } else {
         toast.error(`Failed to timestamp reading: ${result.error}`)
       }
@@ -452,45 +498,7 @@ export default function Dashboard() {
     }
   }
 
-  // Analyze sensor data with AI
-  const analyzeWithAI = async (sensorData: any) => {
-    try {
-      const response = await fetch('/api/grpc/sensor-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          server_address: serverAddress,
-          sensor_data: {
-            temperature: sensorData.temperature,
-            humidity: sensorData.humidity,
-            soil_moisture: sensorData.moisture,
-            ph_level: sensorData.pH,
-            nitrogen: sensorData.nitrogen,
-            phosphorus: sensorData.phosphorus,
-            potassium: sensorData.potassium,
-            sensor_id: 'dashboard_sensor',
-            location: 'Farm Dashboard'
-          }
-        })
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        setAiAnalysis(result.analysis)
-        toast.success("AI analysis completed!")
-        
-        // Add AI recommendations to alerts
-        if (result.recommendations && result.recommendations.length > 0) {
-          setAlerts(prev => [...prev, ...result.recommendations.map((rec: string) => `AI Recommendation: ${rec}`)])
-        }
-      } else {
-        toast.warning(`AI analysis failed: ${result.error}`)
-      }
-    } catch (error) {
-      console.error('AI analysis error:', error)
-    }
-  }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -506,31 +514,79 @@ export default function Dashboard() {
             <CardTitle className="flex items-center gap-2">
               <CloudSun className="h-5 w-5 text-blue-500" />
               Weather Conditions
+              {locationPermission === 'granted' && (
+                <Badge variant="outline" className="text-green-600 text-xs">
+                  Live Location
+                </Badge>
+              )}
+              {locationPermission === 'checking' && (
+                <Badge variant="secondary" className="text-xs animate-pulse">
+                  Getting Location...
+                </Badge>
+              )}
             </CardTitle>
+            {weatherData?.location && (
+              <CardDescription className="text-xs">
+                {weatherData.location}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-semibold">{currentValues.temperature}°C</p>
-                <p className="text-muted-foreground">Humidity: {currentValues.humidity}%</p>
+                <p className="text-2xl font-semibold">
+                  {weatherData?.temperature || currentValues.temperature}°C
+                </p>
+                <p className="text-muted-foreground">
+                  Humidity: {weatherData?.humidity || currentValues.humidity}%
+                </p>
               </div>
               <div className="text-4xl">
-                {weatherCondition === "sunny" && <Sun className="h-12 w-12 text-yellow-500 animate-pulse-slow" />}
-                {weatherCondition === "cloudy" && <CloudSun className="h-12 w-12 text-blue-300 animate-pulse-slow" />}
-                {weatherCondition === "rainy" && <Droplets className="h-12 w-12 text-blue-500 animate-pulse-slow" />}
+                {((weatherData?.weather_condition || weatherCondition) === "sunny") && <Sun className="h-12 w-12 text-yellow-500 animate-pulse-slow" />}
+                {((weatherData?.weather_condition || weatherCondition) === "cloudy") && <CloudSun className="h-12 w-12 text-blue-300 animate-pulse-slow" />}
+                {((weatherData?.weather_condition || weatherCondition) === "rainy") && <Droplets className="h-12 w-12 text-blue-500 animate-pulse-slow" />}
+                {((weatherData?.weather_condition || weatherCondition) === "partly_cloudy") && <CloudSun className="h-12 w-12 text-gray-400 animate-pulse-slow" />}
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-muted-foreground">Wind: {Math.floor(Math.random() * 10) + 5} km/h</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Wind: {weatherData?.wind_speed || (Math.floor(Math.random() * 10) + 5)} km/h
+                  {weatherData?.wind_direction && (
+                    <span className="ml-1">
+                      ({getWindDirection(weatherData.wind_direction)})
+                    </span>
+                  )}
+                </p>
+                {locationPermission === 'denied' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={getUserLocation}
+                    className="text-xs h-6 px-2"
+                  >
+                    Enable Location
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <Wind className="h-4 w-4" />
                 <div className="bg-secondary/20 h-2 rounded-full w-full">
                   <div
-                    className="bg-secondary h-2 rounded-full"
-                    style={{ width: `${Math.floor(Math.random() * 50) + 10}%` }}
+                    className="bg-secondary h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${Math.min((weatherData?.wind_speed || 10) * 3, 100)}%` 
+                    }}
                   ></div>
                 </div>
               </div>
+              {weatherData?.source && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {weatherData.source === 'openweather' ? 'Real weather data' : 
+                   weatherData.source === 'mock' ? 'Demo weather data (no API key)' : 
+                   'Simulated weather data'}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -566,160 +622,74 @@ export default function Dashboard() {
       </div>
 
       {/* Connection Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 gap-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {piConnectionStatus === 'connected' ? 
+              {sensorConnectionStatus === 'connected' ? 
                 <Wifi className="h-5 w-5 text-green-500" /> : 
-                piConnectionStatus === 'checking' ?
+                sensorConnectionStatus === 'checking' ?
                 <Wifi className="h-5 w-5 text-yellow-500 animate-pulse" /> :
                 <WifiOff className="h-5 w-5 text-red-500" />
               }
-              Raspberry Pi Connection
+              ESP32 Sensor Connection
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div>
-                <Badge variant={
-                  piConnectionStatus === 'connected' ? "default" : 
-                  piConnectionStatus === 'checking' ? "secondary" : 
-                  "destructive"
-                }>
-                  {piConnectionStatus === 'connected' ? "Connected" : 
-                   piConnectionStatus === 'checking' ? "Checking..." : 
-                   "Disconnected"}
-                </Badge>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {piConnectionStatus === 'connected' ? "Receiving real sensor data" : 
-                   piConnectionStatus === 'checking' ? "Testing connection..." : 
-                   "Using simulated data"}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    sensorConnectionStatus === 'connected' ? "default" : 
+                    sensorConnectionStatus === 'checking' ? "secondary" : 
+                    "destructive"
+                  }>
+                    {sensorConnectionStatus === 'connected' ? "Connected" : 
+                     sensorConnectionStatus === 'checking' ? "Checking..." : 
+                     "Disconnected"}
+                  </Badge>
+                  {sensorConnectionStatus === 'connected' && (
+                    <Badge variant="outline" className="text-green-600 flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      Transmitting Data
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {sensorConnectionStatus === 'connected' ? 
+                    `ESP32 sensors actively transmitting every 5 seconds` : 
+                   sensorConnectionStatus === 'checking' ? 
+                    "Testing ESP32 connection..." : 
+                    "ESP32 not responding - using simulated data"}
                 </p>
+                {lastDataReceived && sensorConnectionStatus === 'connected' && (
+                  <p className="text-xs text-muted-foreground">
+                    Last data received: {lastDataReceived.toLocaleTimeString()}
+                  </p>
+                )}
               </div>
-              <Button onClick={fetchRealSensorData} variant="outline" size="sm">
-                Refresh
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {isConnected ? <Wifi className="h-5 w-5 text-green-500" /> : <WifiOff className="h-5 w-5 text-red-500" />}
-              AI Load Balancer
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Input
-                placeholder="Load Balancer IP:Port"
-                value={serverAddress}
-                onChange={(e) => setServerAddress(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={testConnection} disabled={isLoading} size="sm">
-                {isLoading ? "Connecting..." : "Connect"}
-              </Button>
-              <Badge variant={isConnected ? "default" : "destructive"}>
-                {isConnected ? "Connected" : "Disconnected"}
-              </Badge>
+              <div className="flex gap-2">
+                <Button onClick={fetchRealSensorData} variant="outline" size="sm">
+                  Refresh
+                </Button>
+                <Button 
+                  onClick={() => setShowConnectionSettings(true)} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <Settings className="h-3 w-3" />
+                  Settings
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Timestamping Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" />
-            Timestamp Current Readings
-          </CardTitle>
-          <CardDescription>
-            Capture and store current sensor values with AI analysis
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add notes about current conditions, activities, or observations..."
-                value={timestampNotes}
-                onChange={(e) => setTimestampNotes(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex gap-4">
-              <Button onClick={timestampReading} disabled={isLoading} className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                {isLoading ? "Saving..." : "Timestamp Reading"}
-              </Button>
-              <Button variant="outline" onClick={loadSensorHistory} className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Refresh History
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => openHealthCardDialog(true)}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Generate Health Card
-              </Button>
-              {isConnected && (
-                <Button variant="outline" onClick={() => analyzeWithAI(currentValues)} className="flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  AI Analysis
-                </Button>
-              )}
-            </div>
-            {sensorHistory.length > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Total readings stored: {sensorHistory.length} | Last reading: {sensorHistory[0]?.datetime}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* AI Analysis Results */}
-      {aiAnalysis && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-500" />
-              AI Analysis Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Health Score</h4>
-                <div className="flex items-center gap-2">
-                  <Progress value={aiAnalysis.detailed_analysis?.health_score * 10 || 0} className="flex-1" />
-                  <span className="text-sm font-medium">{(aiAnalysis.detailed_analysis?.health_score * 10 || 0).toFixed(1)}%</span>
-                </div>
-              </div>
-              {aiAnalysis.detailed_analysis?.alerts && aiAnalysis.detailed_analysis.alerts.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">AI Alerts</h4>
-                  <ul className="space-y-1">
-                    {aiAnalysis.detailed_analysis.alerts.map((alert: string, index: number) => (
-                      <li key={index} className="text-sm p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                        {alert}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {/* Main Sensor Data */}
       <Tabs defaultValue="knobs" className="mb-8">
@@ -1295,6 +1265,119 @@ export default function Dashboard() {
 
 
       </Tabs>
+
+      {/* Timestamping Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-500" />
+            Timestamp Current Readings
+          </CardTitle>
+          <CardDescription>
+            Capture and store current sensor values with AI analysis
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Add notes about current conditions, activities, or observations..."
+                value={timestampNotes}
+                onChange={(e) => setTimestampNotes(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-4">
+              <Button onClick={timestampReading} disabled={isLoading} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                {isLoading ? "Saving..." : "Timestamp Reading"}
+              </Button>
+              <Button variant="outline" onClick={loadSensorHistory} className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Refresh History
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => openHealthCardDialog(true)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Generate Health Card
+              </Button>
+            </div>
+            {sensorHistory.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Total readings stored: {sensorHistory.length} | Last reading: {sensorHistory[0]?.datetime}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ESP32 Connection Settings Dialog */}
+      <Dialog open={showConnectionSettings} onOpenChange={setShowConnectionSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ESP32 Connection Settings</DialogTitle>
+            <DialogDescription>
+              Configure your ESP32 sensor connection. Make sure your ESP32 is on the same network as your laptop.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="esp32-ip">ESP32 IP Address</Label>
+              <Input
+                id="esp32-ip"
+                value={esp32Settings.ip}
+                onChange={(e) => setEsp32Settings(prev => ({ ...prev, ip: e.target.value }))}
+                placeholder="192.168.1.100"
+              />
+              <p className="text-xs text-muted-foreground">
+                Find your ESP32's IP address from your router's admin panel or serial monitor
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="esp32-port">ESP32 Port</Label>
+              <Input
+                id="esp32-port"
+                value={esp32Settings.port}
+                onChange={(e) => setEsp32Settings(prev => ({ ...prev, port: e.target.value }))}
+                placeholder="80"
+              />
+            </div>
+
+            <div className="bg-blue-50 p-3 rounded-lg text-sm">
+              <p className="font-medium text-blue-800 mb-1">Setup Instructions:</p>
+              <ol className="text-blue-700 space-y-1 list-decimal list-inside">
+                <li>Ensure ESP32 is connected to your WiFi network</li>
+                <li>ESP32 should serve sensor data at: <code>http://[IP]:[PORT]/sensor-data</code></li>
+                <li>Data should be in JSON format with fields: temperature, pH, moisture, etc.</li>
+              </ol>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConnectionSettings(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowConnectionSettings(false)
+                  fetchRealSensorData() // Test connection with new settings
+                }}
+              >
+                Save & Test Connection
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Health Card Generation Dialog */}
       <Dialog open={showHealthCardDialog} onOpenChange={setShowHealthCardDialog}>
