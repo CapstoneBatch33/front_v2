@@ -164,6 +164,7 @@ export default function Dashboard() {
   // Connection status
   const [sensorConnectionStatus, setSensorConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
   const [lastDataReceived, setLastDataReceived] = useState<Date | null>(null)
+  const [lastHeartbeat, setLastHeartbeat] = useState<string>('Never')
   const [showConnectionSettings, setShowConnectionSettings] = useState(false)
   const [esp32Settings, setEsp32Settings] = useState({
     ip: '192.168.1.100',
@@ -236,21 +237,29 @@ export default function Dashboard() {
     getUserLocation() // Get location and weather data
   }, [])
 
-  // SIMPLE: Check if ESP32 is alive using file-based heartbeat
+  // SUPER SIMPLE: Check if ESP32 is alive using human-readable timestamps
   const checkESP32Simple = async () => {
     try {
       const response = await fetch('/api/simple-heartbeat')
       const result = await response.json()
       
-      console.log('💓 SIMPLE heartbeat check:', result)
+      console.log('💓 SUPER SIMPLE heartbeat check:', result)
       
       if (result.esp32_alive === true) {
         setSensorConnectionStatus('connected')
         setLastDataReceived(new Date())
-        console.log('✅ ESP32 ALIVE (heartbeat within 15 seconds)')
+        setLastHeartbeat(result.last_heartbeat || 'Never')
+        console.log('✅ ESP32 ALIVE', {
+          last_heartbeat: result.last_heartbeat,
+          current_time: result.current_time,
+          seconds_since: result.seconds_since
+        })
       } else {
         setSensorConnectionStatus('disconnected')
-        console.log('❌ ESP32 DEAD (no recent heartbeat)', {
+        setLastHeartbeat(result.last_heartbeat || 'Never')
+        console.log('❌ ESP32 DEAD', {
+          last_heartbeat: result.last_heartbeat,
+          current_time: result.current_time,
           seconds_since: result.seconds_since,
           reason: result.reason
         })
@@ -686,9 +695,14 @@ export default function Dashboard() {
                     "Testing ESP32 connection..." : 
                     "ESP32 not responding - using simulated data"}
                 </p>
-                {lastDataReceived && sensorConnectionStatus === 'connected' && (
+                {sensorConnectionStatus === 'connected' && lastHeartbeat !== 'Never' && (
                   <p className="text-xs text-muted-foreground">
-                    Last data received: {lastDataReceived.toLocaleTimeString()}
+                    Last heartbeat: {lastHeartbeat}
+                  </p>
+                )}
+                {sensorConnectionStatus === 'disconnected' && lastHeartbeat !== 'Never' && (
+                  <p className="text-xs text-muted-foreground">
+                    Last seen: {lastHeartbeat}
                   </p>
                 )}
               </div>

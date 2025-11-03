@@ -16,18 +16,30 @@ export async function GET(request: NextRequest) {
     if (piResponse.ok) {
       const heartbeatData = await piResponse.json()
       
-      // Simple logic: ESP32 is alive if heartbeat is within 15 seconds
+      // Simple logic: ESP32 is alive based on Pi server's calculation
       const isAlive = heartbeatData.esp32_alive === true
+      const secondsSince = heartbeatData.seconds_since_heartbeat || 999
+      const lastHeartbeat = heartbeatData.last_heartbeat || 'Never'
+      const currentTime = heartbeatData.current_time || 'Unknown'
+      
+      console.log(`💓 SIMPLE Heartbeat Check:`)
+      console.log(`   Current: ${currentTime}`)
+      console.log(`   Last HB: ${lastHeartbeat}`)
+      console.log(`   Seconds: ${secondsSince}`)
+      console.log(`   Alive: ${isAlive}`)
       
       return NextResponse.json({
         success: true,
         esp32_alive: isAlive,
-        seconds_since: heartbeatData.seconds_since_heartbeat || 999,
-        reason: heartbeatData.reason || 'File-based check'
+        seconds_since: secondsSince,
+        last_heartbeat: lastHeartbeat,
+        current_time: currentTime,
+        reason: isAlive ? 'Recent heartbeat detected' : `No heartbeat for ${secondsSince} seconds`
       })
     }
     
     // If Pi server is unreachable, ESP32 is definitely dead
+    console.log('❌ Cannot reach Pi server - ESP32 considered DEAD')
     return NextResponse.json({
       success: false,
       esp32_alive: false,

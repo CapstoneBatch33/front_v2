@@ -62,17 +62,17 @@ def receive_sensor_data():
 
 @app.route('/esp32-heartbeat', methods=['POST'])
 def receive_heartbeat():
-    """Receive heartbeat from ESP32 - SAVE TIMESTAMP TO FILE"""
+    """Receive heartbeat from ESP32 - SAVE SIMPLE TIMESTAMP TO FILE"""
     try:
         heartbeat_data = request.get_json()
         
         if heartbeat_data:
             print(f"Received heartbeat: {heartbeat_data}")
             
-            # Save current timestamp to file (SIMPLE!)
-            current_time = time.time()
+            # Save simple human-readable timestamp to file
+            current_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
             with open(HEARTBEAT_FILE, 'w') as f:
-                f.write(str(current_time))
+                f.write(current_time)
             
             print(f"💓 Heartbeat saved to file: {current_time}")
             
@@ -103,7 +103,7 @@ def get_sensor_data():
 
 @app.route('/heartbeat-status', methods=['GET'])
 def get_heartbeat_status():
-    """SIMPLE heartbeat check - read timestamp from file"""
+    """SUPER SIMPLE heartbeat check - read human-readable timestamp from file"""
     try:
         if not os.path.exists(HEARTBEAT_FILE):
             return jsonify({
@@ -111,23 +111,31 @@ def get_heartbeat_status():
                 'reason': 'No heartbeat file found'
             }), 200
         
-        # Read timestamp from file
+        # Read simple timestamp from file (format: "03-11-2024 22:30:15")
         with open(HEARTBEAT_FILE, 'r') as f:
-            last_heartbeat_time = float(f.read().strip())
+            last_heartbeat_str = f.read().strip()
         
-        # Check if heartbeat is recent (within 15 seconds)
-        current_time = time.time()
-        seconds_since = current_time - last_heartbeat_time
+        # Parse the timestamp
+        last_heartbeat_time = datetime.strptime(last_heartbeat_str, "%d-%m-%Y %H:%M:%S")
+        current_time = datetime.now()
         
-        esp32_alive = seconds_since < 15  # 15 seconds threshold
+        # Calculate difference in seconds
+        time_diff = current_time - last_heartbeat_time
+        seconds_since = int(time_diff.total_seconds())
         
-        print(f"🔍 Heartbeat check: {seconds_since:.1f}s ago, alive={esp32_alive}")
+        # ESP32 is alive if heartbeat is within 20 seconds
+        esp32_alive = seconds_since < 20
+        
+        print(f"🔍 Current time: {current_time.strftime('%d-%m-%Y %H:%M:%S')}")
+        print(f"🔍 Last heartbeat: {last_heartbeat_str}")
+        print(f"🔍 Seconds since: {seconds_since}")
+        print(f"🔍 ESP32 alive: {esp32_alive}")
         
         return jsonify({
             'esp32_alive': esp32_alive,
-            'seconds_since_heartbeat': int(seconds_since),
-            'last_heartbeat_time': last_heartbeat_time,
-            'current_time': current_time
+            'seconds_since_heartbeat': seconds_since,
+            'last_heartbeat': last_heartbeat_str,
+            'current_time': current_time.strftime('%d-%m-%Y %H:%M:%S')
         }), 200
         
     except Exception as e:
@@ -137,28 +145,47 @@ def get_heartbeat_status():
             'reason': f'Error: {str(e)}'
         }), 200
 
+@app.route('/reset-heartbeat', methods=['POST'])
+def reset_heartbeat():
+    """Reset heartbeat file (for debugging)"""
+    try:
+        if os.path.exists(HEARTBEAT_FILE):
+            os.remove(HEARTBEAT_FILE)
+            print("🗑️ Heartbeat file deleted")
+        return jsonify({'status': 'success', 'message': 'Heartbeat file reset'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/', methods=['GET'])
 def index():
     """Simple index page"""
     try:
-        # Check heartbeat status
+        # Check heartbeat status using simple timestamp
         esp32_alive = False
+        last_heartbeat_display = "Never"
+        
         if os.path.exists(HEARTBEAT_FILE):
             with open(HEARTBEAT_FILE, 'r') as f:
-                last_heartbeat_time = float(f.read().strip())
-            seconds_since = time.time() - last_heartbeat_time
-            esp32_alive = seconds_since < 15
+                last_heartbeat_str = f.read().strip()
+            
+            last_heartbeat_display = last_heartbeat_str
+            last_heartbeat_time = datetime.strptime(last_heartbeat_str, "%d-%m-%Y %H:%M:%S")
+            current_time = datetime.now()
+            seconds_since = int((current_time - last_heartbeat_time).total_seconds())
+            esp32_alive = seconds_since < 20
     except:
         esp32_alive = False
     
     return jsonify({
-        'message': 'SIMPLE ESP32 Server',
+        'message': 'SUPER SIMPLE ESP32 Server',
         'esp32_status': 'ALIVE' if esp32_alive else 'DEAD',
+        'last_heartbeat': last_heartbeat_display,
+        'current_time': datetime.now().strftime('%d-%m-%Y %H:%M:%S'),
         'endpoints': {
             'POST /sensor-data': 'Receive sensor data from ESP32',
             'GET /sensor-data': 'Get latest sensor data',
-            'POST /esp32-heartbeat': 'Receive heartbeat (saves to file)',
-            'GET /heartbeat-status': 'Check if ESP32 is alive (reads from file)'
+            'POST /esp32-heartbeat': 'Receive heartbeat (saves human-readable timestamp)',
+            'GET /heartbeat-status': 'Check if ESP32 is alive (reads human-readable timestamp)'
         }
     }), 200
 
