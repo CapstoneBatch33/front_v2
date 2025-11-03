@@ -1,9 +1,6 @@
 Things That Are NOT Fully Implemented:
 1. Real Hardware Integration
-  Missing: Actual Raspberry Pi server (pi_server.py referenced but not present)
-  Missing: ESP32 sensor code integration
-  Status: Currently uses mock/simulated sensor data
-  Impact: Dashboard shows fake data instead of real sensor readings
+  Missing: getting the real sensor values to the esp32
 2. AI Load Balancer Backend
   Missing: The actual Python gRPC server for load balancing
   Missing: load_balancer.proto file for gRPC definitions

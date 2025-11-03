@@ -11,5 +11,70 @@
     "potassium": 71,
     "location": "Farm Dashboard",
     "notes": "hifas"
+  },
+  {
+    "timestamp": "2025-11-03T14:00:59.412Z",
+    "datetime": "3/11/2025, 7:30:59 pm",
+    "temperature": 28.7,
+    "humidity": 55.5,
+    "soil_moisture": 55.5,
+    "ph_level": 6.4,
+    "nitrogen": 45,
+    "phosphorus": 30,
+    "potassium": 60,
+    "location": "Farm Dashboard",
+    "notes": "fawfaw"
+  },
+  {
+    "timestamp": "2025-11-03T14:01:00.973Z",
+    "datetime": "3/11/2025, 7:31:00 pm",
+    "temperature": 28.7,
+    "humidity": 55.5,
+    "soil_moisture": 55.5,
+    "ph_level": 6.4,
+    "nitrogen": 45,
+    "phosphorus": 30,
+    "potassium": 60,
+    "location": "Farm Dashboard",
+    "notes": "fawfawfawf"
+  },
+  {
+    "timestamp": "2025-11-03T14:01:02.132Z",
+    "datetime": "3/11/2025, 7:31:02 pm",
+    "temperature": 28.7,
+    "humidity": 55.5,
+    "soil_moisture": 55.5,
+    "ph_level": 6.4,
+    "nitrogen": 45,
+    "phosphorus": 30,
+    "potassium": 60,
+    "location": "Farm Dashboard",
+    "notes": "fawfa"
+  },
+  {
+    "timestamp": "2025-11-03T14:01:03.425Z",
+    "datetime": "3/11/2025, 7:31:03 pm",
+    "temperature": 28.7,
+    "humidity": 55.5,
+    "soil_moisture": 55.5,
+    "ph_level": 6.4,
+    "nitrogen": 45,
+    "phosphorus": 30,
+    "potassium": 60,
+    "location": "Farm Dashboard",
+    "notes": "dgbasdsd"
+  },
+  {
+    "timestamp": "2025-11-03T14:01:04.663Z",
+    "datetime": "3/11/2025, 7:31:04 pm",
+    "temperature": 28.7,
+    "humidity": 55.5,
+    "soil_moisture": 55.5,
+    "ph_level": 6.4,
+    "nitrogen": 45,
+    "phosphorus": 30,
+    "potassium": 60,
+    "location": "Farm Dashboard",
+    "notes": "bsd"
   }
 ]

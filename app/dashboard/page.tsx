@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Brain, Wifi, WifiOff } from "lucide-react"
+import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Brain, Wifi, WifiOff, Download, FileText } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,8 @@ import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 // Function to fetch real sensor data from backend
@@ -129,6 +131,31 @@ export default function Dashboard() {
   const [sensorHistory, setSensorHistory] = useState<any[]>([])
   const [aiAnalysis, setAiAnalysis] = useState<any>(null)
   
+  // Health card generation
+  const [isGeneratingHealthCard, setIsGeneratingHealthCard] = useState(false)
+  const [selectedDataForHealthCard, setSelectedDataForHealthCard] = useState<any>(null)
+  const [showHealthCardDialog, setShowHealthCardDialog] = useState(false)
+  const [healthCardForm, setHealthCardForm] = useState({
+    dataSource: 'current', // 'current' or 'timestamped'
+    selectedReading: null as any,
+    farmerDetails: {
+      name: '',
+      address: '',
+      village: '',
+      subDistrict: '',
+      district: '',
+      pin: '',
+      aadhaar: '',
+      mobile: '',
+      farmSize: '',
+      surveyNo: '',
+      khasraNo: '',
+      latitude: '',
+      longitude: '',
+      irrigationType: 'Irrigated'
+    }
+  })
+  
   // Connection status
   const [piConnectionStatus, setPiConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
 
@@ -233,6 +260,149 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to load sensor history:', error)
+    }
+  }
+
+  // Export sensor history to CSV
+  const exportToCSV = () => {
+    if (sensorHistory.length === 0) {
+      toast.error("No data to export")
+      return
+    }
+
+    const headers = ['Timestamp', 'Temperature (°C)', 'pH Level', 'Soil Moisture (%)', 'Nitrogen (ppm)', 'Phosphorus (ppm)', 'Potassium (ppm)', 'Notes']
+    const csvContent = [
+      headers.join(','),
+      ...sensorHistory.map(row => [
+        row.datetime || row.timestamp,
+        row.temperature || '',
+        row.ph_level || row.pH || '',
+        row.soil_moisture || row.moisture || '',
+        row.nitrogen || '',
+        row.phosphorus || '',
+        row.potassium || '',
+        `"${row.notes || ''}"` // Wrap notes in quotes to handle commas
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `sensor_data_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success("CSV file downloaded successfully!")
+  }
+
+  // Open health card dialog
+  const openHealthCardDialog = (useCurrentData = true, selectedReading = null) => {
+    setHealthCardForm(prev => ({
+      ...prev,
+      dataSource: useCurrentData ? 'current' : 'timestamped',
+      selectedReading: selectedReading
+    }))
+    setShowHealthCardDialog(true)
+  }
+
+  // Generate soil health card with form data
+  const generateHealthCard = async () => {
+    // Validate required fields
+    const { farmerDetails, dataSource, selectedReading } = healthCardForm
+    if (!farmerDetails.name || !farmerDetails.address || !farmerDetails.mobile) {
+      toast.error("Please fill in all required fields (Name, Address, Mobile)")
+      return
+    }
+
+    setIsGeneratingHealthCard(true)
+    try {
+      const sensorData = dataSource === 'current' ? {
+        temperature: currentValues.temperature,
+        ph_level: currentValues.ph_level,
+        pH: currentValues.ph_level,
+        soil_moisture: currentValues.soil_moisture,
+        moisture: currentValues.soil_moisture,
+        nitrogen: currentValues.nitrogen,
+        phosphorus: currentValues.phosphorus,
+        potassium: currentValues.potassium,
+        timestamp: new Date().toISOString()
+      } : {
+        temperature: selectedReading.temperature,
+        ph_level: selectedReading.ph_level,
+        pH: selectedReading.ph_level,
+        soil_moisture: selectedReading.soil_moisture,
+        moisture: selectedReading.soil_moisture,
+        nitrogen: selectedReading.nitrogen,
+        phosphorus: selectedReading.phosphorus,
+        potassium: selectedReading.potassium,
+        timestamp: selectedReading.datetime || selectedReading.timestamp
+      }
+
+      const farmerData = {
+        name: farmerDetails.name,
+        address: farmerDetails.address,
+        village: farmerDetails.village,
+        sub_district: farmerDetails.subDistrict,
+        district: farmerDetails.district,
+        pin: farmerDetails.pin,
+        aadhaar: farmerDetails.aadhaar,
+        mobile: farmerDetails.mobile,
+        farm_size: farmerDetails.farmSize,
+        survey_no: farmerDetails.surveyNo,
+        khasra_no: farmerDetails.khasraNo,
+        latitude: farmerDetails.latitude,
+        longitude: farmerDetails.longitude,
+        irrigation_type: farmerDetails.irrigationType
+      }
+
+      const response = await fetch('/api/generate-health-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sensorData, farmerData })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Create download link for the image
+        const link = document.createElement('a')
+        link.href = `data:image/png;base64,${result.image}`
+        link.download = `soil_health_card_${farmerDetails.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.png`
+        link.click()
+        
+        toast.success("Soil Health Card generated and downloaded successfully!")
+        setShowHealthCardDialog(false)
+        
+        // Reset form
+        setHealthCardForm(prev => ({
+          ...prev,
+          farmerDetails: {
+            name: '',
+            address: '',
+            village: '',
+            subDistrict: '',
+            district: '',
+            pin: '',
+            aadhaar: '',
+            mobile: '',
+            farmSize: '',
+            surveyNo: '',
+            khasraNo: '',
+            latitude: '',
+            longitude: '',
+            irrigationType: 'Irrigated'
+          }
+        }))
+      } else {
+        toast.error(`Failed to generate health card: ${result.error}`)
+      }
+    } catch (error) {
+      toast.error(`Error generating health card: ${error}`)
+    } finally {
+      setIsGeneratingHealthCard(false)
     }
   }
 
@@ -492,6 +662,14 @@ export default function Dashboard() {
                 <History className="h-4 w-4" />
                 Refresh History
               </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => openHealthCardDialog(true)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Generate Health Card
+              </Button>
               {isConnected && (
                 <Button variant="outline" onClick={() => analyzeWithAI(currentValues)} className="flex items-center gap-2">
                   <Brain className="h-4 w-4" />
@@ -714,13 +892,37 @@ export default function Dashboard() {
         <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-blue-500" />
-                Timestamped Sensor History
-              </CardTitle>
-              <CardDescription>
-                View historical sensor readings with timestamps and notes
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-5 w-5 text-blue-500" />
+                    Timestamped Sensor History
+                  </CardTitle>
+                  <CardDescription>
+                    View historical sensor readings with timestamps and notes
+                  </CardDescription>
+                </div>
+                {sensorHistory.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={exportToCSV}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Export CSV
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => openHealthCardDialog(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Health Card
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {sensorHistory.length > 0 ? (
@@ -876,7 +1078,18 @@ export default function Dashboard() {
                       <div key={index} className="p-4 border rounded-lg">
                         <div className="flex justify-between items-start mb-2">
                           <div className="font-medium">{reading.datetime}</div>
-                          <Badge variant="outline">{reading.location}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{reading.location}</Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openHealthCardDialog(false, reading)}
+                              className="flex items-center gap-1"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Health Card
+                            </Button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm mb-2">
                           <div>Temp: {reading.temperature}°C</div>
@@ -1082,6 +1295,279 @@ export default function Dashboard() {
 
 
       </Tabs>
+
+      {/* Health Card Generation Dialog */}
+      <Dialog open={showHealthCardDialog} onOpenChange={setShowHealthCardDialog}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Generate Soil Health Card</DialogTitle>
+          <DialogDescription>
+            Fill in the farmer details and select data source to generate a professional soil health card.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Data Source Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Data Source</Label>
+            <Select 
+              value={healthCardForm.dataSource} 
+              onValueChange={(value) => setHealthCardForm(prev => ({ ...prev, dataSource: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select data source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">Current Sensor Values</SelectItem>
+                <SelectItem value="timestamped">Timestamped Historical Data</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Historical Data Selection */}
+          {healthCardForm.dataSource === 'timestamped' && (
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Select Historical Reading</Label>
+              <Select 
+                value={healthCardForm.selectedReading ? sensorHistory.indexOf(healthCardForm.selectedReading).toString() : ''} 
+                onValueChange={(value) => setHealthCardForm(prev => ({ 
+                  ...prev, 
+                  selectedReading: sensorHistory[parseInt(value)] 
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a timestamped reading" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sensorHistory.map((reading, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {`Timestamp: `}
+                      {reading.datetime} 
+                      {reading.notes && `, Notes: ${reading.notes},`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Farmer Details Form */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Farmer Details</Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={healthCardForm.farmerDetails.name}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, name: e.target.value }
+                  }))}
+                  placeholder="Enter farmer name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="mobile">Mobile Number *</Label>
+                <Input
+                  id="mobile"
+                  value={healthCardForm.farmerDetails.mobile}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, mobile: e.target.value }
+                  }))}
+                  placeholder="Enter mobile number"
+                />
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="address">Address *</Label>
+                <Input
+                  id="address"
+                  value={healthCardForm.farmerDetails.address}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, address: e.target.value }
+                  }))}
+                  placeholder="Enter complete address"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="village">Village</Label>
+                <Input
+                  id="village"
+                  value={healthCardForm.farmerDetails.village}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, village: e.target.value }
+                  }))}
+                  placeholder="Enter village name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="subDistrict">Sub-District</Label>
+                <Input
+                  id="subDistrict"
+                  value={healthCardForm.farmerDetails.subDistrict}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, subDistrict: e.target.value }
+                  }))}
+                  placeholder="Enter sub-district"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="district">District</Label>
+                <Input
+                  id="district"
+                  value={healthCardForm.farmerDetails.district}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, district: e.target.value }
+                  }))}
+                  placeholder="Enter district"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="pin">PIN Code</Label>
+                <Input
+                  id="pin"
+                  value={healthCardForm.farmerDetails.pin}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, pin: e.target.value }
+                  }))}
+                  placeholder="Enter PIN code"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="aadhaar">Aadhaar Number</Label>
+                <Input
+                  id="aadhaar"
+                  value={healthCardForm.farmerDetails.aadhaar}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, aadhaar: e.target.value }
+                  }))}
+                  placeholder="Enter Aadhaar number"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="farmSize">Farm Size</Label>
+                <Input
+                  id="farmSize"
+                  value={healthCardForm.farmerDetails.farmSize}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, farmSize: e.target.value }
+                  }))}
+                  placeholder="e.g., 2.5 acres"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="surveyNo">Survey Number</Label>
+                <Input
+                  id="surveyNo"
+                  value={healthCardForm.farmerDetails.surveyNo}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, surveyNo: e.target.value }
+                  }))}
+                  placeholder="Enter survey number"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="khasraNo">Khasra/Dag Number</Label>
+                <Input
+                  id="khasraNo"
+                  value={healthCardForm.farmerDetails.khasraNo}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, khasraNo: e.target.value }
+                  }))}
+                  placeholder="Enter Khasra/Dag number"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="latitude">Latitude</Label>
+                <Input
+                  id="latitude"
+                  value={healthCardForm.farmerDetails.latitude}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, latitude: e.target.value }
+                  }))}
+                  placeholder="Enter latitude"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="longitude">Longitude</Label>
+                <Input
+                  id="longitude"
+                  value={healthCardForm.farmerDetails.longitude}
+                  onChange={(e) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, longitude: e.target.value }
+                  }))}
+                  placeholder="Enter longitude"
+                />
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="irrigationType">Irrigation Type</Label>
+                <Select 
+                  value={healthCardForm.farmerDetails.irrigationType} 
+                  onValueChange={(value) => setHealthCardForm(prev => ({
+                    ...prev,
+                    farmerDetails: { ...prev.farmerDetails, irrigationType: value }
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Irrigated">Irrigated</SelectItem>
+                    <SelectItem value="Rainfed">Rainfed</SelectItem>
+                    <SelectItem value="Mixed">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHealthCardDialog(false)}
+              disabled={isGeneratingHealthCard}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={generateHealthCard}
+              disabled={isGeneratingHealthCard || !healthCardForm.farmerDetails.name || !healthCardForm.farmerDetails.address || !healthCardForm.farmerDetails.mobile}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {isGeneratingHealthCard ? "Generating..." : "Generate Health Card"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
     </div>
   )
 }
