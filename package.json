@@ -9,7 +9,10 @@
     "lint": "next lint --dir src",
     "start-all": "node enhanced_start_all.js",
     "start-pi": "python pi_server.py",
-    "start-backend": "node enhanced_server.js"
+    "start-backend": "node enhanced_server.js",
+    "start-chatbot": "node start-chatbot.js",
+    "ollama-server": "node ollama-server.js",
+    "test-chatbot": "node test-chatbot.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.2",
@@ -45,11 +48,14 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@tensorflow/tfjs": "^4.22.0",
     "autoprefixer": "^10.4.17",
+    "axios": "^1.13.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^0.2.1",
+    "cors": "^2.8.5",
     "date-fns": "^3.3.1",
     "embla-carousel-react": "^8.0.0",
+    "express": "^5.1.0",
     "framer-motion": "^11.0.8",
     "input-otp": "^1.0.1",
     "lucide-react": "^0.344.0",
