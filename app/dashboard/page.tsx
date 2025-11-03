@@ -236,31 +236,40 @@ export default function Dashboard() {
     getUserLocation() // Get location and weather data
   }, [])
 
+  // SIMPLE: Check if ESP32 is alive using file-based heartbeat
+  const checkESP32Simple = async () => {
+    try {
+      const response = await fetch('/api/simple-heartbeat')
+      const result = await response.json()
+      
+      console.log('💓 SIMPLE heartbeat check:', result)
+      
+      if (result.esp32_alive === true) {
+        setSensorConnectionStatus('connected')
+        setLastDataReceived(new Date())
+        console.log('✅ ESP32 ALIVE (heartbeat within 15 seconds)')
+      } else {
+        setSensorConnectionStatus('disconnected')
+        console.log('❌ ESP32 DEAD (no recent heartbeat)', {
+          seconds_since: result.seconds_since,
+          reason: result.reason
+        })
+      }
+    } catch (error) {
+      console.error('Simple heartbeat check failed:', error)
+      setSensorConnectionStatus('disconnected')
+    }
+  }
+
   // Fetch real sensor data from ESP32 sensors
   const fetchRealSensorData = async () => {
     try {
       setSensorConnectionStatus('checking')
       
-      // First check heartbeat to determine if ESP32 is actually alive
-      const heartbeatResponse = await fetch('/api/esp32-heartbeat')
-      const heartbeatResult = await heartbeatResponse.json()
+      // SIMPLE heartbeat check first
+      await checkESP32Simple()
       
-      console.log('🔍 Heartbeat check result:', heartbeatResult)
-      
-      // Set connection status based on heartbeat ONLY
-      if (heartbeatResult.success && heartbeatResult.data && heartbeatResult.data.esp32_alive === true) {
-        setSensorConnectionStatus('connected')
-        setLastDataReceived(new Date())
-        console.log('✅ ESP32 is ALIVE - Status: CONNECTED')
-      } else {
-        setSensorConnectionStatus('disconnected')
-        console.log('❌ ESP32 is DEAD - Status: DISCONNECTED', {
-          esp32_alive: heartbeatResult.data?.esp32_alive,
-          seconds_since: heartbeatResult.data?.seconds_since_heartbeat
-        })
-      }
-      
-      // Fetch sensor data for display (regardless of connection status)
+      // Fetch sensor data for display
       const sensorData = await fetchCurrentSensorData()
       setCurrentSensorData(sensorData)
       
