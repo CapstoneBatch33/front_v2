@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Brain, Wifi, WifiOff, Download, FileText } from "lucide-react"
+import { Droplets, Thermometer, Leaf, CloudSun, Tractor, AlertTriangle, Sun, Wind, Clock, Save, History, Brain, Download, FileText } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -121,9 +121,6 @@ export default function Dashboard() {
   const [tractorPosition, setTractorPosition] = useState(0)
   const [activeSensor, setActiveSensor] = useState<string | null>(null)
   
-  // Load balancer integration
-  const [serverAddress, setServerAddress] = useState("192.168.1.100:50051")
-  const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
   // Timestamping functionality
@@ -156,8 +153,7 @@ export default function Dashboard() {
     }
   })
   
-  // Connection status
-  const [piConnectionStatus, setPiConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+
 
   // Current values (use real sensor data if available, otherwise last data point)
   const currentValues = currentSensorData || data[data.length - 1]
@@ -171,10 +167,8 @@ export default function Dashboard() {
   // Fetch real sensor data from Pi
   const fetchRealSensorData = async () => {
     try {
-      setPiConnectionStatus('checking')
       const sensorData = await fetchCurrentSensorData()
       setCurrentSensorData(sensorData)
-      setPiConnectionStatus('connected')
       
       // Update chart data with real sensor reading
       setData(prevData => [
@@ -184,7 +178,6 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error('Failed to fetch real sensor data:', error)
-      setPiConnectionStatus('disconnected')
     }
   }
 
@@ -222,32 +215,7 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [currentValues])
 
-  // Load balancer connection test
-  const testConnection = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/grpc/health', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ server_address: serverAddress })
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setIsConnected(true)
-        toast.success("Connected to AI Load Balancer!")
-      } else {
-        setIsConnected(false)
-        toast.error(`Connection failed: ${data.error}`)
-      }
-    } catch (error) {
-      setIsConnected(false)
-      toast.error(`Connection error: ${error}`)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+
 
   // Load sensor history
   const loadSensorHistory = async () => {
@@ -437,11 +405,6 @@ export default function Dashboard() {
         toast.success("Sensor reading timestamped successfully!")
         setTimestampNotes("")
         loadSensorHistory()
-        
-        // Send to AI load balancer for analysis if connected
-        if (isConnected) {
-          await analyzeWithAI(currentReading)
-        }
       } else {
         toast.error(`Failed to timestamp reading: ${result.error}`)
       }
@@ -452,45 +415,7 @@ export default function Dashboard() {
     }
   }
 
-  // Analyze sensor data with AI
-  const analyzeWithAI = async (sensorData: any) => {
-    try {
-      const response = await fetch('/api/grpc/sensor-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          server_address: serverAddress,
-          sensor_data: {
-            temperature: sensorData.temperature,
-            humidity: sensorData.humidity,
-            soil_moisture: sensorData.moisture,
-            ph_level: sensorData.pH,
-            nitrogen: sensorData.nitrogen,
-            phosphorus: sensorData.phosphorus,
-            potassium: sensorData.potassium,
-            sensor_id: 'dashboard_sensor',
-            location: 'Farm Dashboard'
-          }
-        })
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        setAiAnalysis(result.analysis)
-        toast.success("AI analysis completed!")
-        
-        // Add AI recommendations to alerts
-        if (result.recommendations && result.recommendations.length > 0) {
-          setAlerts(prev => [...prev, ...result.recommendations.map((rec: string) => `AI Recommendation: ${rec}`)])
-        }
-      } else {
-        toast.warning(`AI analysis failed: ${result.error}`)
-      }
-    } catch (error) {
-      console.error('AI analysis error:', error)
-    }
-  }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -565,126 +490,9 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Connection Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {piConnectionStatus === 'connected' ? 
-                <Wifi className="h-5 w-5 text-green-500" /> : 
-                piConnectionStatus === 'checking' ?
-                <Wifi className="h-5 w-5 text-yellow-500 animate-pulse" /> :
-                <WifiOff className="h-5 w-5 text-red-500" />
-              }
-              Raspberry Pi Connection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <Badge variant={
-                  piConnectionStatus === 'connected' ? "default" : 
-                  piConnectionStatus === 'checking' ? "secondary" : 
-                  "destructive"
-                }>
-                  {piConnectionStatus === 'connected' ? "Connected" : 
-                   piConnectionStatus === 'checking' ? "Checking..." : 
-                   "Disconnected"}
-                </Badge>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {piConnectionStatus === 'connected' ? "Receiving real sensor data" : 
-                   piConnectionStatus === 'checking' ? "Testing connection..." : 
-                   "Using simulated data"}
-                </p>
-              </div>
-              <Button onClick={fetchRealSensorData} variant="outline" size="sm">
-                Refresh
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {isConnected ? <Wifi className="h-5 w-5 text-green-500" /> : <WifiOff className="h-5 w-5 text-red-500" />}
-              AI Load Balancer
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Input
-                placeholder="Load Balancer IP:Port"
-                value={serverAddress}
-                onChange={(e) => setServerAddress(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={testConnection} disabled={isLoading} size="sm">
-                {isLoading ? "Connecting..." : "Connect"}
-              </Button>
-              <Badge variant={isConnected ? "default" : "destructive"}>
-                {isConnected ? "Connected" : "Disconnected"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Timestamping Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" />
-            Timestamp Current Readings
-          </CardTitle>
-          <CardDescription>
-            Capture and store current sensor values with AI analysis
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add notes about current conditions, activities, or observations..."
-                value={timestampNotes}
-                onChange={(e) => setTimestampNotes(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex gap-4">
-              <Button onClick={timestampReading} disabled={isLoading} className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                {isLoading ? "Saving..." : "Timestamp Reading"}
-              </Button>
-              <Button variant="outline" onClick={loadSensorHistory} className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Refresh History
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => openHealthCardDialog(true)}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Generate Health Card
-              </Button>
-              {isConnected && (
-                <Button variant="outline" onClick={() => analyzeWithAI(currentValues)} className="flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  AI Analysis
-                </Button>
-              )}
-            </div>
-            {sensorHistory.length > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Total readings stored: {sensorHistory.length} | Last reading: {sensorHistory[0]?.datetime}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* AI Analysis Results */}
       {aiAnalysis && (
@@ -1295,6 +1103,56 @@ export default function Dashboard() {
 
 
       </Tabs>
+
+      {/* Timestamping Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-500" />
+            Timestamp Current Readings
+          </CardTitle>
+          <CardDescription>
+            Capture and store current sensor values with AI analysis
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Add notes about current conditions, activities, or observations..."
+                value={timestampNotes}
+                onChange={(e) => setTimestampNotes(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-4">
+              <Button onClick={timestampReading} disabled={isLoading} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                {isLoading ? "Saving..." : "Timestamp Reading"}
+              </Button>
+              <Button variant="outline" onClick={loadSensorHistory} className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Refresh History
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => openHealthCardDialog(true)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Generate Health Card
+              </Button>
+            </div>
+            {sensorHistory.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Total readings stored: {sensorHistory.length} | Last reading: {sensorHistory[0]?.datetime}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Health Card Generation Dialog */}
       <Dialog open={showHealthCardDialog} onOpenChange={setShowHealthCardDialog}>
