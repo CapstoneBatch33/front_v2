@@ -24,18 +24,43 @@ export async function GET(request: NextRequest) {
           heartbeat_count: heartbeatData.heartbeat_count || 0
         }
       })
+    } else if (piResponse.status === 404) {
+      // Pi server doesn't have heartbeat endpoint - assume ESP32 is disconnected
+      console.log('Pi server does not have heartbeat endpoint')
+      return NextResponse.json({
+        success: true,
+        data: {
+          esp32_alive: false,
+          last_heartbeat: null,
+          seconds_since_heartbeat: null,
+          heartbeat_count: 0,
+          error: 'Heartbeat endpoint not available on Pi server'
+        }
+      })
     }
     
     return NextResponse.json({
       success: false,
-      error: 'Could not reach Raspberry Pi'
+      error: 'Could not reach Raspberry Pi',
+      data: {
+        esp32_alive: false,
+        last_heartbeat: null,
+        seconds_since_heartbeat: null,
+        heartbeat_count: 0
+      }
     }, { status: 503 })
     
   } catch (error) {
     console.error('ESP32 heartbeat check error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Heartbeat check failed'
+      error: 'Heartbeat check failed',
+      data: {
+        esp32_alive: false,
+        last_heartbeat: null,
+        seconds_since_heartbeat: null,
+        heartbeat_count: 0
+      }
     }, { status: 500 })
   }
 }

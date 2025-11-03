@@ -233,10 +233,13 @@ export default function Dashboard() {
       const response = await fetch('/api/esp32-heartbeat')
       const result = await response.json()
       
-      if (result.success && result.data.esp32_alive) {
+      // Only show connected if heartbeat check succeeds AND ESP32 is alive
+      if (result.success && result.data && result.data.esp32_alive === true) {
         setSensorConnectionStatus('connected')
+        console.log('ESP32 heartbeat: ALIVE')
       } else {
         setSensorConnectionStatus('disconnected')
+        console.log('ESP32 heartbeat: DEAD or unavailable', result)
       }
     } catch (error) {
       console.error('Failed to check ESP32 heartbeat:', error)
@@ -258,13 +261,12 @@ export default function Dashboard() {
       const sensorData = await fetchCurrentSensorData()
       setCurrentSensorData(sensorData)
       
-      // Check if we got real ESP32 data or mock data
+      // Always check heartbeat to determine real connection status
+      await checkESP32Heartbeat()
+      
+      // Only set last data received if we got real ESP32 data
       if (sensorData.source === 'esp32_via_pi') {
-        // Check ESP32 heartbeat to determine real connection status
-        await checkESP32Heartbeat()
         setLastDataReceived(new Date())
-      } else {
-        setSensorConnectionStatus('disconnected')
       }
       
       // Update chart data with sensor reading
