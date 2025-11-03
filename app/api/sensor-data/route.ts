@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Raspberry Pi connection settings (receives data from ESP32)
-const RASPBERRY_PI_IP = process.env.RASPBERRY_PI_IP || 'rpi-desktop.local'
-const RASPBERRY_PI_PORT = process.env.RASPBERRY_PI_PORT || '5000'
+// Pi server connection settings (receives data from ESP32)
+const PI_SERVER_IP = process.env.PI_SERVER_IP || '192.168.1.152'
+const PI_SERVER_PORT = process.env.PI_SERVER_PORT || '5000'
 
 export async function GET(request: NextRequest) {
   try {
     // Try to fetch from Raspberry Pi (which receives ESP32 data)
     try {
-      const piResponse = await fetch(`http://${RASPBERRY_PI_IP}:${RASPBERRY_PI_PORT}/sensor-data`, {
+      const piResponse = await fetch(`http://${PI_SERVER_IP}:${PI_SERVER_PORT}/sensor-data`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(2000) // 2 second timeout for Pi

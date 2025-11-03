@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Raspberry Pi connection settings
-const RASPBERRY_PI_IP = process.env.RASPBERRY_PI_IP || 'rpi-desktop.local'
-const RASPBERRY_PI_PORT = process.env.RASPBERRY_PI_PORT || '5000'
+// Pi server connection settings
+const PI_SERVER_IP = process.env.PI_SERVER_IP || '192.168.1.152'
+const PI_SERVER_PORT = process.env.PI_SERVER_PORT || '5000'
 
 export async function GET(request: NextRequest) {
   try {
     // Call the simple heartbeat status endpoint
-    const piResponse = await fetch(`http://${RASPBERRY_PI_IP}:${RASPBERRY_PI_PORT}/heartbeat-status`, {
+    const piResponse = await fetch(`http://${PI_SERVER_IP}:${PI_SERVER_PORT}/heartbeat-status`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(2000) // 2 second timeout
