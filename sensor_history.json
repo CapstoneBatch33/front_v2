@@ -1,14 +1,15 @@
 [
   {
-    "timestamp": "2025-09-24T19:55:04.805Z",
-    "datetime": "25/9/2025, 1:25:04 am",
-    "temperature": 22,
-    "humidity": 66,
-    "soil_moisture": 33,
-    "ph_level": 5.3,
-    "co2": 556,
-    "light": 902,
+    "timestamp": "2025-11-03T13:28:12.836Z",
+    "datetime": "3/11/2025, 6:58:12 pm",
+    "temperature": 24.7,
+    "humidity": 75,
+    "soil_moisture": 50,
+    "ph_level": 5.9,
+    "nitrogen": 41,
+    "phosphorus": 37,
+    "potassium": 71,
     "location": "Farm Dashboard",
-    "notes": "hhh"
+    "notes": "hifas"
   }
 ]

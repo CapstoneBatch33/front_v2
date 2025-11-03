@@ -12,8 +12,9 @@ interface SensorReading {
   humidity: number;
   soil_moisture: number;
   ph_level: number;
-  co2: number;
-  light: number;
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
   location?: string;
   notes?: string;
 }
@@ -73,8 +74,9 @@ export async function POST(request: NextRequest) {
       humidity: parseFloat(sensor_data.humidity) || 0,
       soil_moisture: parseFloat(sensor_data.moisture || sensor_data.soil_moisture) || 0,
       ph_level: parseFloat(sensor_data.pH || sensor_data.ph_level) || 0,
-      co2: parseFloat(sensor_data.co2) || 0,
-      light: parseFloat(sensor_data.light) || 0,
+      nitrogen: parseFloat(sensor_data.nitrogen) || 0,
+      phosphorus: parseFloat(sensor_data.phosphorus) || 0,
+      potassium: parseFloat(sensor_data.potassium) || 0,
       location: sensor_data.location || 'Farm Dashboard',
       notes: notes || ''
     };

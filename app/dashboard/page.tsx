@@ -67,9 +67,9 @@ const generateInitialMockData = () => {
       moisture: Math.floor(Math.random() * 20) + 30,
       temperature: Math.floor(Math.random() * 10) + 18,
       pH: (Math.random() * 2 + 5).toFixed(1),
-      co2: Math.floor(Math.random() * 200) + 400,
-      light: Math.floor(Math.random() * 500) + 500,
-      humidity: Math.floor(Math.random() * 30) + 40,
+      nitrogen: Math.floor(Math.random() * 40) + 30,
+      phosphorus: Math.floor(Math.random() * 30) + 15,
+      potassium: Math.floor(Math.random() * 40) + 60,
     })
   }
 
@@ -85,8 +85,12 @@ const getStatusColor = (value: number, type: string) => {
       return value < 20 ? "blue" : value > 25 ? "destructive" : "green"
     case "pH":
       return value < 6.0 ? "yellow" : value > 6.8 ? "yellow" : "green"
-    case "co2":
-      return value > 550 ? "yellow" : "green"
+    case "nitrogen":
+      return value < 40 ? "destructive" : value > 60 ? "yellow" : "green"
+    case "phosphorus":
+      return value < 20 ? "destructive" : value > 40 ? "yellow" : "green"
+    case "potassium":
+      return value < 60 ? "destructive" : value > 100 ? "yellow" : "green"
     default:
       return "green"
   }
@@ -248,8 +252,9 @@ export default function Dashboard() {
             humidity: currentReading.humidity,
             moisture: currentReading.moisture,
             pH: currentReading.pH,
-            co2: currentReading.co2,
-            light: currentReading.light,
+            nitrogen: currentReading.nitrogen,
+            phosphorus: currentReading.phosphorus,
+            potassium: currentReading.potassium,
             location: 'Farm Dashboard'
           },
           notes: timestampNotes
@@ -290,8 +295,9 @@ export default function Dashboard() {
             humidity: sensorData.humidity,
             soil_moisture: sensorData.moisture,
             ph_level: sensorData.pH,
-            co2: sensorData.co2,
-            light: sensorData.light,
+            nitrogen: sensorData.nitrogen,
+            phosphorus: sensorData.phosphorus,
+            potassium: sensorData.potassium,
             sensor_id: 'dashboard_sensor',
             location: 'Farm Dashboard'
           }
@@ -543,23 +549,11 @@ export default function Dashboard() {
           <TabsTrigger value="knobs">Sensor Knobs</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="field">Field View</TabsTrigger>
         </TabsList>
 
         <TabsContent value="knobs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              {
-                name: "Soil Moisture",
-                value: currentValues.moisture,
-                unit: "%",
-                icon: <Droplets className="h-6 w-6" />,
-                type: "moisture",
-                min: 0,
-                max: 100,
-                optimal: [35, 45],
-                color: "blue"
-              },
               {
                 name: "Temperature",
                 value: currentValues.temperature,
@@ -572,7 +566,7 @@ export default function Dashboard() {
                 color: "red"
               },
               {
-                name: "Soil pH",
+                name: "pH Level",
                 value: Number.parseFloat(currentValues.pH),
                 unit: "",
                 icon: <Leaf className="h-6 w-6" />,
@@ -583,21 +577,63 @@ export default function Dashboard() {
                 color: "green"
               },
               {
-                name: "CO₂ Level",
-                value: currentValues.co2,
+                name: "Soil Moisture",
+                value: currentValues.moisture,
+                unit: "%",
+                icon: <Droplets className="h-6 w-6" />,
+                type: "moisture",
+                min: 0,
+                max: 100,
+                optimal: [35, 45],
+                color: "blue"
+              },
+              {
+                name: "Nitrogen",
+                value: currentValues.nitrogen,
                 unit: "ppm",
                 icon: (
                   <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M8,8 A4,4 0 1,1 8,16 A4,4 0 1,1 8,8" />
-                    <path d="M16,8 A4,4 0 1,1 16,16 A4,4 0 1,1 16,8" />
-                    <path d="M12,4 L12,20" />
+                    <circle cx="12" cy="12" r="10"/>
+                    <text x="12" y="16" textAnchor="middle" fontSize="10" fill="currentColor">N</text>
                   </svg>
                 ),
-                type: "co2",
-                min: 300,
-                max: 800,
-                optimal: [400, 550],
+                type: "nitrogen",
+                min: 0,
+                max: 100,
+                optimal: [40, 60],
+                color: "orange"
+              },
+              {
+                name: "Phosphorus",
+                value: currentValues.phosphorus,
+                unit: "ppm",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <text x="12" y="16" textAnchor="middle" fontSize="10" fill="currentColor">P</text>
+                  </svg>
+                ),
+                type: "phosphorus",
+                min: 0,
+                max: 80,
+                optimal: [20, 40],
                 color: "purple"
+              },
+              {
+                name: "Potassium",
+                value: currentValues.potassium,
+                unit: "ppm",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <text x="12" y="16" textAnchor="middle" fontSize="10" fill="currentColor">K</text>
+                  </svg>
+                ),
+                type: "potassium",
+                min: 0,
+                max: 120,
+                optimal: [60, 100],
+                color: "teal"
               },
             ].map((sensor) => {
               const statusColor = getStatusColor(sensor.value, sensor.type)
@@ -618,69 +654,53 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {/* Knob Display */}
+                    {/* Circular Progress Ring */}
                     <div className="relative w-32 h-32 mx-auto mb-4">
-                      {/* Knob Background */}
-                      <svg className="w-full h-full" viewBox="0 0 120 120">
-                        {/* Background Arc */}
-                        <path
-                          d="M 20 60 A 40 40 0 1 1 100 60"
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                        {/* Background Circle */}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
                           fill="none"
                           stroke="hsl(var(--muted))"
                           strokeWidth="8"
-                          strokeLinecap="round"
                         />
-                        {/* Optimal Range Arc */}
-                        <path
-                          d={`M ${20 + ((sensor.optimal[0] - sensor.min) / (sensor.max - sensor.min)) * 80} ${60 - Math.sin(Math.acos((((sensor.optimal[0] - sensor.min) / (sensor.max - sensor.min)) * 80 - 40) / 40)) * 40} A 40 40 0 0 1 ${20 + ((sensor.optimal[1] - sensor.min) / (sensor.max - sensor.min)) * 80} ${60 - Math.sin(Math.acos((((sensor.optimal[1] - sensor.min) / (sensor.max - sensor.min)) * 80 - 40) / 40)) * 40}`}
-                          fill="none"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                          opacity="0.3"
-                        />
-                        {/* Value Arc */}
-                        <path
-                          d={`M 20 60 A 40 40 0 ${percentage > 50 ? 1 : 0} 1 ${20 + (percentage / 100) * 80} ${60 - Math.sin(Math.acos(((percentage / 100) * 80 - 40) / 40)) * 40}`}
+                        {/* Progress Circle */}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
                           fill="none"
                           stroke={
-                            statusColor === "green" ? "hsl(var(--primary))" :
-                            statusColor === "yellow" ? "hsl(var(--accent))" :
-                            statusColor === "destructive" ? "hsl(var(--destructive))" :
-                            "hsl(var(--secondary))"
+                            statusColor === "green" ? "#22c55e" :
+                            statusColor === "yellow" ? "#eab308" :
+                            statusColor === "destructive" ? "#ef4444" :
+                            statusColor === "blue" ? "#3b82f6" :
+                            "#22c55e"
                           }
-                          strokeWidth="6"
+                          strokeWidth="8"
                           strokeLinecap="round"
+                          strokeDasharray={`${(percentage / 100) * 314.16} 314.16`}
+                          className="transition-all duration-500 ease-in-out"
                         />
-                        {/* Needle */}
-                        <line
-                          x1="60"
-                          y1="60"
-                          x2={60 + Math.cos((angle * Math.PI) / 180) * 35}
-                          y2={60 + Math.sin((angle * Math.PI) / 180) * 35}
-                          stroke="hsl(var(--foreground))"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                        {/* Center Dot */}
-                        <circle cx="60" cy="60" r="4" fill="hsl(var(--foreground))" />
                       </svg>
                       
                       {/* Value Display */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center mt-8">
+                        <div className="text-center">
                           <div className="text-2xl font-bold">{sensor.value}</div>
-                          <div className="text-sm text-muted-foreground">{sensor.unit}</div>
+                          <div className="text-xs text-muted-foreground">{sensor.unit}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-xs text-muted-foreground px-2">
                         <span>{sensor.min}</span>
                         <span>{sensor.max}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground text-center">
+                      <div className="text-xs text-muted-foreground text-center px-2">
                         Optimal: {sensor.optimal[0]} - {sensor.optimal[1]} {sensor.unit}
                       </div>
                     </div>
@@ -705,7 +725,7 @@ export default function Dashboard() {
             <CardContent>
               {sensorHistory.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <Card>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">Temperature Trend</CardTitle>
@@ -724,6 +744,30 @@ export default function Dashboard() {
                                 labelFormatter={(value) => new Date(value).toLocaleString()}
                               />
                               <Line type="monotone" dataKey="temperature" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">pH Level Trend</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={sensorHistory.slice(-20).reverse()}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="datetime" 
+                                tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              />
+                              <YAxis />
+                              <Tooltip 
+                                labelFormatter={(value) => new Date(value).toLocaleString()}
+                              />
+                              <Line type="monotone" dataKey="ph_level" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -753,6 +797,78 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Nitrogen Trend</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={sensorHistory.slice(-20).reverse()}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="datetime" 
+                                tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              />
+                              <YAxis />
+                              <Tooltip 
+                                labelFormatter={(value) => new Date(value).toLocaleString()}
+                              />
+                              <Line type="monotone" dataKey="nitrogen" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Phosphorus Trend</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={sensorHistory.slice(-20).reverse()}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="datetime" 
+                                tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              />
+                              <YAxis />
+                              <Tooltip 
+                                labelFormatter={(value) => new Date(value).toLocaleString()}
+                              />
+                              <Line type="monotone" dataKey="phosphorus" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Potassium Trend</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={sensorHistory.slice(-20).reverse()}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="datetime" 
+                                tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              />
+                              <YAxis />
+                              <Tooltip 
+                                labelFormatter={(value) => new Date(value).toLocaleString()}
+                              />
+                              <Line type="monotone" dataKey="potassium" stroke="#14b8a6" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                   
                   <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -764,11 +880,11 @@ export default function Dashboard() {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm mb-2">
                           <div>Temp: {reading.temperature}°C</div>
-                          <div>Humidity: {reading.humidity}%</div>
-                          <div>Moisture: {reading.soil_moisture}%</div>
                           <div>pH: {reading.ph_level}</div>
-                          <div>CO₂: {reading.co2}ppm</div>
-                          <div>Light: {reading.light}lux</div>
+                          <div>Moisture: {reading.soil_moisture}%</div>
+                          <div>Nitrogen: {reading.nitrogen}ppm</div>
+                          <div>Phosphorus: {reading.phosphorus}ppm</div>
+                          <div>Potassium: {reading.potassium}ppm</div>
                         </div>
                         {reading.notes && (
                           <div className="text-sm text-muted-foreground italic">
@@ -791,35 +907,7 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="charts">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Soil Moisture</CardTitle>
-                <CardDescription>24-hour history (%)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis domain={[20, 60]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="moisture"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Temperature</CardTitle>
@@ -850,7 +938,7 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Soil pH</CardTitle>
+                <CardTitle>pH Level</CardTitle>
                 <CardDescription>24-hour history</CardDescription>
               </CardHeader>
               <CardContent>
@@ -878,7 +966,35 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>CO₂ Levels</CardTitle>
+                <CardTitle>Soil Moisture</CardTitle>
+                <CardDescription>24-hour history (%)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis domain={[20, 60]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="moisture"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Nitrogen</CardTitle>
                 <CardDescription>24-hour history (ppm)</CardDescription>
               </CardHeader>
               <CardContent>
@@ -887,13 +1003,69 @@ export default function Dashboard() {
                     <LineChart data={data}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="time" />
-                      <YAxis domain={[350, 650]} />
+                      <YAxis domain={[0, 100]} />
                       <Tooltip />
                       <Legend />
                       <Line
                         type="monotone"
-                        dataKey="co2"
+                        dataKey="nitrogen"
+                        stroke="#f97316"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Phosphorus</CardTitle>
+                <CardDescription>24-hour history (ppm)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis domain={[0, 80]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="phosphorus"
                         stroke="#a855f7"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Potassium</CardTitle>
+                <CardDescription>24-hour history (ppm)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis domain={[0, 120]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="potassium"
+                        stroke="#14b8a6"
                         strokeWidth={2}
                         dot={false}
                         activeDot={{ r: 8 }}
@@ -906,221 +1078,9 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="gauges">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                name: "Soil Moisture",
-                value: currentValues.moisture,
-                unit: "%",
-                icon: <Droplets className="h-6 w-6" />,
-                type: "moisture",
-                min: 0,
-                max: 100,
-                optimal: [35, 45],
-              },
-              {
-                name: "Temperature",
-                value: currentValues.temperature,
-                unit: "°C",
-                icon: <Thermometer className="h-6 w-6" />,
-                type: "temperature",
-                min: 0,
-                max: 40,
-                optimal: [20, 25],
-              },
-              {
-                name: "Soil pH",
-                value: Number.parseFloat(currentValues.pH),
-                unit: "",
-                icon: <Leaf className="h-6 w-6" />,
-                type: "pH",
-                min: 0,
-                max: 14,
-                optimal: [6.0, 6.8],
-              },
-              {
-                name: "CO₂ Level",
-                value: currentValues.co2,
-                unit: "ppm",
-                icon: (
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M8,8 A4,4 0 1,1 8,16 A4,4 0 1,1 8,8" />
-                    <path d="M16,8 A4,4 0 1,1 16,16 A4,4 0 1,1 16,8" />
-                    <path d="M12,4 L12,20" />
-                  </svg>
-                ),
-                type: "co2",
-                min: 300,
-                max: 800,
-                optimal: [400, 550],
-              },
-            ].map((sensor) => {
-              const statusColor = getStatusColor(sensor.value, sensor.type)
-              const percentage = ((sensor.value - sensor.min) / (sensor.max - sensor.min)) * 100
 
-              return (
-                <Card key={sensor.name} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        {sensor.icon}
-                        {sensor.name}
-                      </span>
-                      <Badge variant={statusColor as "default" | "destructive" | "secondary" | "outline"}>
-                        {getStatusText(statusColor)}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center mb-4">
-                      <span className="text-4xl font-bold">{sensor.value}</span>
-                      <span className="text-xl">{sensor.unit}</span>
-                    </div>
 
-                    <div className="space-y-2">
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full bg-${statusColor}`}
-                          style={{
-                            width: `${Math.min(100, Math.max(0, percentage))}%`,
-                            backgroundColor:
-                              statusColor === "green"
-                                ? "hsl(var(--primary))"
-                                : statusColor === "yellow"
-                                  ? "hsl(var(--accent))"
-                                  : statusColor === "destructive"
-                                    ? "hsl(var(--destructive))"
-                                    : statusColor === "blue"
-                                      ? "hsl(var(--secondary))"
-                                      : "",
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{sensor.min}</span>
-                        <span>{sensor.max}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground text-center">
-                        Optimal range: {sensor.optimal[0]} - {sensor.optimal[1]} {sensor.unit}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="field">
-          <Card>
-            <CardHeader>
-              <CardTitle>Field View</CardTitle>
-              <CardDescription>Visual representation of your farm</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative h-[500px] bg-gradient-to-b from-blue-50 to-green-100 rounded-lg overflow-hidden border border-border">
-                {/* Sky */}
-                <div className="absolute inset-0 h-1/3 bg-gradient-to-b from-blue-300 to-blue-100">
-                  {/* Sun */}
-                  <div className="absolute top-10 right-20">
-                    <Sun className="h-16 w-16 text-yellow-400 animate-pulse-slow" />
-                  </div>
-
-                  {/* Clouds */}
-                  <motion.div
-                    className="absolute top-16 left-10"
-                    animate={{ x: [0, 100, 0] }}
-                    transition={{ duration: 60, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                  >
-                    <svg className="h-12 w-24 text-white" viewBox="0 0 100 50" fill="currentColor">
-                      <path d="M10,30 Q25,10 40,30 T70,30 Q85,10 100,30 T130,30 Q145,10 160,30 V50 H10 Z" />
-                    </svg>
-                  </motion.div>
-                </div>
-
-                {/* Field */}
-                <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-b from-green-300 to-green-500">
-                  {/* Crops */}
-                  <div className="absolute inset-0 flex items-end">
-                    {[...Array(20)].map((_, i) => (
-                      <div key={i} className="flex-1 flex justify-center">
-                        <div
-                          className="w-4 bg-green-700"
-                          style={{
-                            height: `${Math.random() * 30 + 50}px`,
-                            marginBottom: "0px",
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Tractor */}
-                  <motion.div className="absolute bottom-10" style={{ left: `${tractorPosition}%` }}>
-                    <Tractor className="h-16 w-16 text-accent" />
-                  </motion.div>
-
-                  {/* Sensor Nodes */}
-                  {[
-                    { x: 20, y: 70, type: "moisture" },
-                    { x: 50, y: 60, type: "temperature" },
-                    { x: 80, y: 65, type: "pH" },
-                  ].map((sensor, i) => (
-                    <div
-                      key={i}
-                      className="absolute w-6 h-6 bg-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
-                      style={{ left: `${sensor.x}%`, top: `${sensor.y}%` }}
-                      onClick={() => setActiveSensor(activeSensor === sensor.type ? null : sensor.type)}
-                    >
-                      {sensor.type === "moisture" && <Droplets className="h-4 w-4 text-blue-500" />}
-                      {sensor.type === "temperature" && <Thermometer className="h-4 w-4 text-red-500" />}
-                      {sensor.type === "pH" && <Leaf className="h-4 w-4 text-green-500" />}
-
-                      {/* Popup */}
-                      {activeSensor === sensor.type && (
-                        <div className="absolute bottom-full mb-2 w-48 bg-white p-3 rounded-lg shadow-lg z-10">
-                          <div className="font-medium mb-1">
-                            {sensor.type === "moisture" && "Soil Moisture"}
-                            {sensor.type === "temperature" && "Temperature"}
-                            {sensor.type === "pH" && "Soil pH"}
-                          </div>
-                          <div className="text-sm mb-2">
-                            {sensor.type === "moisture" && `${currentValues.moisture}%`}
-                            {sensor.type === "temperature" && `${currentValues.temperature}°C`}
-                            {sensor.type === "pH" && currentValues.pH}
-                          </div>
-                          <Progress
-                            value={
-                              sensor.type === "moisture"
-                                ? (currentValues.moisture - 30) * 5
-                                : sensor.type === "temperature"
-                                  ? (currentValues.temperature - 18) * 10
-                                  : (Number.parseFloat(currentValues.pH) - 5) * 50
-                            }
-                            className="h-2"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-center gap-4">
-                <Button variant="outline" size="sm">
-                  Zoom In
-                </Button>
-                <Button variant="outline" size="sm">
-                  Zoom Out
-                </Button>
-                <Button variant="outline" size="sm">
-                  Reset View
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   )

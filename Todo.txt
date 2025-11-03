@@ -1,0 +1,46 @@
+Things That Are NOT Fully Implemented:
+1. Real Hardware Integration
+  Missing: Actual Raspberry Pi server (pi_server.py referenced but not present)
+  Missing: ESP32 sensor code integration
+  Status: Currently uses mock/simulated sensor data
+  Impact: Dashboard shows fake data instead of real sensor readings
+2. AI Load Balancer Backend
+  Missing: The actual Python gRPC server for load balancing
+  Missing: load_balancer.proto file for gRPC definitions
+  Missing: grpc_bridge.py script referenced in API routes
+  Status: API routes exist but will fail without the Python backend
+  Impact: Load balancer testing page won't work with real distributed AI
+3. Plant Disease Detection Model
+  Missing: Actual TensorFlow.js model files (/models/plant_disease_model/model.json)
+  Status: Model loading code exists but model files are missing
+  Impact: Image upload for disease detection will fail
+4. Database Integration
+  Current: Uses simple JSON file storage
+  Missing: Proper database (PostgreSQL, MongoDB, etc.)
+  Impact: Limited scalability and data persistence
+5. Authentication & Security
+  Missing: User authentication system
+  Missing: API security/rate limiting
+  Missing: Role-based access control
+  Impact: System is completely open
+6. Real-time Data Streaming
+  Missing: WebSocket connections for live updates
+  Current: Uses polling every 10 seconds
+  Impact: Not truly real-time
+7. Production Configuration
+  Missing: Docker containerization
+  Missing: Environment-specific configs
+  Missing: CI/CD pipeline
+  Missing: Monitoring and logging setup
+8. API Endpoints Not Implemented
+  /api/sensor-data - Returns mock data instead of real Pi data
+  /api/assistant - AI assistant endpoint missing
+  Most gRPC endpoints will fail without Python backend
+9. Error Handling & Validation
+  Incomplete: Limited input validation
+  Missing: Comprehensive error boundaries
+  Missing: Proper API error responses
+10. Testing
+  Missing: Unit tests
+  Missing: Integration tests
+  Missing: E2E tests
