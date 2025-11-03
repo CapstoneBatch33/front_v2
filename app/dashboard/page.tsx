@@ -227,6 +227,23 @@ export default function Dashboard() {
     }
   }
 
+  // Check ESP32 heartbeat status
+  const checkESP32Heartbeat = async () => {
+    try {
+      const response = await fetch('/api/esp32-heartbeat')
+      const result = await response.json()
+      
+      if (result.success && result.data.esp32_alive) {
+        setSensorConnectionStatus('connected')
+      } else {
+        setSensorConnectionStatus('disconnected')
+      }
+    } catch (error) {
+      console.error('Failed to check ESP32 heartbeat:', error)
+      setSensorConnectionStatus('disconnected')
+    }
+  }
+
   // Load sensor history and get location on component mount
   useEffect(() => {
     loadSensorHistory()
@@ -242,8 +259,9 @@ export default function Dashboard() {
       setCurrentSensorData(sensorData)
       
       // Check if we got real ESP32 data or mock data
-      if (sensorData.source === 'esp32' || sensorData.source === 'esp32_via_python') {
-        setSensorConnectionStatus('connected')
+      if (sensorData.source === 'esp32_via_pi') {
+        // Check ESP32 heartbeat to determine real connection status
+        await checkESP32Heartbeat()
         setLastDataReceived(new Date())
       } else {
         setSensorConnectionStatus('disconnected')
