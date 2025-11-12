@@ -605,20 +605,39 @@ export default function SmartLoadBalancerV4Page() {
                               {(() => {
                                 const parts = msg.content.split("PROCESSING_DETAILS_START")
                                 const mainAnswer = parts[0].trim()
-                                const processingDetails = parts[1] ? parts[1].replace(/={80}/g, "").trim() : ""
+                                const processingDetails = parts[1] ? parts[1].trim() : ""
+                                
+                                // Function to render markdown-style text
+                                const renderMarkdown = (text: string) => {
+                                  return text.split('\n').map((line, idx) => {
+                                    // Convert **text** to bold
+                                    const parts = line.split(/(\*\*.*?\*\*)/)
+                                    return (
+                                      <span key={idx}>
+                                        {parts.map((part, pIdx) => {
+                                          if (part.startsWith('**') && part.endsWith('**')) {
+                                            return <strong key={pIdx}>{part.slice(2, -2)}</strong>
+                                          }
+                                          return <span key={pIdx}>{part}</span>
+                                        })}
+                                        {idx < text.split('\n').length - 1 && <br />}
+                                      </span>
+                                    )
+                                  })
+                                }
                                 
                                 return (
                                   <>
-                                    <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                                      {mainAnswer}
+                                    <div className="text-sm leading-relaxed">
+                                      {renderMarkdown(mainAnswer)}
                                     </div>
                                     {processingDetails && (
                                       <details className="mt-4">
                                         <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground transition-colors py-2 px-3 rounded-md hover:bg-muted/50">
                                           📊 View Processing Details
                                         </summary>
-                                        <div className="mt-3 p-4 bg-muted/30 rounded-lg border border-muted">
-                                          <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto">
+                                        <div className="mt-3 p-4 bg-muted/30 rounded-lg border border-muted overflow-hidden">
+                                          <pre className="text-xs font-mono whitespace-pre-wrap break-words overflow-wrap-anywhere">
                                             {processingDetails}
                                           </pre>
                                         </div>
@@ -629,8 +648,28 @@ export default function SmartLoadBalancerV4Page() {
                               })()}
                             </div>
                           ) : (
-                            // Regular text response
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                            // Regular text response - also render markdown
+                            <div className="text-sm leading-relaxed">
+                              {(() => {
+                                const renderMarkdown = (text: string) => {
+                                  return text.split('\n').map((line, idx) => {
+                                    const parts = line.split(/(\*\*.*?\*\*)/)
+                                    return (
+                                      <span key={idx}>
+                                        {parts.map((part, pIdx) => {
+                                          if (part.startsWith('**') && part.endsWith('**')) {
+                                            return <strong key={pIdx}>{part.slice(2, -2)}</strong>
+                                          }
+                                          return <span key={pIdx}>{part}</span>
+                                        })}
+                                        {idx < text.split('\n').length - 1 && <br />}
+                                      </span>
+                                    )
+                                  })
+                                }
+                                return renderMarkdown(msg.content)
+                              })()}
+                            </div>
                           )}
                         </div>
                         <p className="text-xs opacity-70 mt-2">
