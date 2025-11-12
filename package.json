@@ -12,7 +12,8 @@
     "start-backend": "node enhanced_server.js",
     "start-chatbot": "node start-chatbot.js",
     "ollama-server": "node ollama-server.js",
-    "test-chatbot": "node test-chatbot.js"
+    "test-chatbot": "node test-chatbot.js",
+    "smart-loadbalancer": "cd ../server && python start_smart_loadbalancer.py"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.2",

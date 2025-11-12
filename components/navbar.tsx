@@ -11,7 +11,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "Dashboard", path: "/dashboard" },
   { name: "AI Chatbot", path: "/chatbot" },
-  { name: "Load Balancer", path: "/test_loadBalancer" },
+  { name: "Smart Load Balancer", path: "/smart-loadbalancer" },
   { name: "Team", path: "/team" },
 ]
 

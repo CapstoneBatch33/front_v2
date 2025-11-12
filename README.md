@@ -1,295 +1,422 @@
-# 🌱 Smart Farm Dashboard & AI Chatbot
+# Frontend - Smart AI Load Balancer
 
-A comprehensive smart farming solution with real-time sensor monitoring, data visualization, and an AI-powered farming assistant chatbot.
+The frontend provides a web interface for interacting with the distributed AI system.
 
-## 🚀 Features
+## 🌐 Technology Stack
 
-- **📊 Real-time Dashboard** - Monitor soil moisture, temperature, pH, and other vital metrics
-- **🤖 AI Farming Assistant** - Chat with TinyLlama for farming advice and recommendations
-- **📈 Data Visualization** - Interactive charts and graphs for sensor data analysis
-- **🖼️ Plant Disease Detection** - Upload plant images for AI-powered disease identification
-- **📱 Responsive Design** - Works seamlessly on desktop and mobile devices
-- **🔄 Live Data Updates** - Real-time sensor data from IoT devices
+- **Next.js 14** - React framework
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Styling
+- **React Hooks** - State management
 
-## 🛠️ Tech Stack
+## 🚀 Setup
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Node.js, Express, Python Flask
-- **AI**: Ollama (TinyLlama), TensorFlow.js
-- **UI Components**: shadcn/ui, Radix UI
-- **Charts**: Recharts
-- **Styling**: Tailwind CSS, Framer Motion
-
-## 📋 Prerequisites
-
-Before running the project, ensure you have the following installed:
-
-- **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
-- **Python** (v3.8 or higher) - [Download here](https://python.org/)
-- **Ollama** - [Download here](https://ollama.ai/)
-- **Git** - [Download here](https://git-scm.com/)
-
-## 🔧 Installation
-
-### 1. Clone the Repository
-```bash
-git clone <your-repository-url>
-cd smart-farm-dashboard
-```
-
-### 2. Install Node.js Dependencies
+### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 3. Install Python Dependencies
+Or with pnpm:
 ```bash
-pip install -r requirements.txt
+pnpm install
 ```
 
-### 4. Install and Setup Ollama
-```bash
-# Install Ollama (follow instructions for your OS from https://ollama.ai)
-
-# Start Ollama service
-ollama serve
-
-# Pull the TinyLlama model (in a new terminal)
-ollama pull tinyllama
-
-# Test Ollama (optional)
-ollama run tinyllama "Hello, how are you?"
-```
-
-## 🚀 Running the Application
-
-You have two options to run the complete system:
-
-### Option A: Automated Startup (Recommended)
-```bash
-npm run start-chatbot
-```
-This will start all services automatically.
-
-### Option B: Manual Startup
-
-#### Terminal 1: Start Ollama Service
-```bash
-ollama serve
-```
-
-#### Terminal 2: Start Python Backend (Sensor Data)
-```bash
-python smart_farm_server.py
-```
-
-#### Terminal 3: Start Node.js Backend (AI Chatbot)
-```bash
-node ollama-server.js
-```
-
-#### Terminal 4: Start Next.js Frontend
+### 2. Start Development Server
 ```bash
 npm run dev
 ```
 
-## 🌐 Access the Application
-
-Once all services are running:
-
-- **🏠 Main Dashboard**: http://localhost:3000
-- **🤖 AI Chatbot**: http://localhost:3000/chatbot
-- **📊 Sensor History**: http://localhost:3000/sensor-history
-- **🔧 Backend API**: http://localhost:3001
-- **🐍 Python API**: http://localhost:8080
-
-## 📱 How to Use
-
-### Dashboard Features
-1. **Real-time Monitoring**: View live sensor data on the main dashboard
-2. **Historical Data**: Check sensor trends and patterns over time
-3. **Health Cards**: Generate soil health reports and recommendations
-
-### AI Chatbot Features
-1. **Ask Questions**: Type farming-related questions in natural language
-2. **Get Recommendations**: Receive personalized advice based on your sensor data
-3. **Image Analysis**: Upload plant photos to detect diseases
-4. **Smart Suggestions**: Get contextual suggestions based on your queries
-
-### Example Questions for the AI Chatbot
-- "What's the best fertilizer for corn?"
-- "How often should I water my tomatoes?"
-- "What are signs of plant disease?"
-- "What crops should I plant this season?"
-- "My soil pH is 6.2, is that good?"
-
-## 🔧 Configuration
-
-### Environment Variables
-Create a `.env.local` file in the root directory:
-```env
-# Optional: Add any API keys or configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
-PYTHON_API_URL=http://localhost:8080
-```
-
-### Sensor Configuration
-Edit `smart_farm_server.py` to configure your sensor endpoints and data sources.
-
-### AI Model Configuration
-Edit `ollama-server.js` to customize the AI assistant's behavior and responses.
-
-## 🧪 Testing
-
-### Test the Complete Setup
+Or with pnpm:
 ```bash
-npm run test-chatbot
+pnpm dev
 ```
 
-### Test Individual Components
-```bash
-# Test frontend only
-npm run dev
-
-# Test Python backend
-python smart_farm_server.py
-
-# Test Node.js backend
-node ollama-server.js
+### 3. Access the Application
+Open your browser to:
 ```
-
-## 📊 API Endpoints
-
-### Frontend API Routes
-- `GET /api/sensor-data` - Get current sensor readings
-- `GET /api/sensor-history` - Get historical sensor data
-- `POST /api/assistant` - Chat with AI assistant
-
-### Python Backend (Port 8080)
-- `GET /api/sensor-data` - Real sensor data from IoT devices
-- `POST /api/generate-health-card` - Generate soil health reports
-
-### Node.js Backend (Port 3001)
-- `POST /api/assistant` - AI chatbot powered by Ollama
-- `GET /api/sensor-data` - Proxy to Python backend
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-#### 1. Ollama Not Working
-```bash
-# Check if Ollama is installed
-ollama --version
-
-# Start Ollama service
-ollama serve
-
-# Pull the model again
-ollama pull tinyllama
+http://localhost:3000/smart-loadbalancer
 ```
-
-#### 2. Port Already in Use
-```bash
-# Kill processes on specific ports
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-
-# macOS/Linux
-lsof -ti:3000 | xargs kill -9
-```
-
-#### 3. Python Dependencies Issues
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### 4. Node.js Dependencies Issues
-```bash
-# Clear npm cache
-npm cache clean --force
-
-# Delete node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Error Messages
-
-| Error | Solution |
-|-------|----------|
-| "Connection refused" | Make sure all servers are running |
-| "Model not found" | Run `ollama pull tinyllama` |
-| "Port 3000 in use" | Kill the process or use a different port |
-| "Python module not found" | Install requirements: `pip install -r requirements.txt` |
 
 ## 📁 Project Structure
 
 ```
-smart-farm-dashboard/
-├── app/                          # Next.js app directory
-│   ├── dashboard/               # Dashboard page
-│   ├── chatbot/                # AI chatbot page
-│   ├── api/                    # API routes
-│   └── globals.css             # Global styles
-├── components/                  # React components
-│   ├── ui/                     # shadcn/ui components
-│   └── navbar.tsx              # Navigation component
-├── lib/                        # Utility libraries
-│   ├── utils.ts               # Helper functions
-│   └── model-loader.js        # AI model loader
-├── public/                     # Static assets
-├── data/                       # Data files
-├── ollama-server.js           # AI chatbot backend
-├── smart_farm_server.py       # Sensor data backend
-├── start-chatbot.js           # Startup script
-├── package.json               # Node.js dependencies
-├── requirements.txt           # Python dependencies
-└── README.md                  # This file
+front_v2/
+├── app/
+│   ├── api/smart-loadbalancer/          # API routes
+│   │   ├── query/route.ts               # Query endpoint
+│   │   ├── status/route.ts              # Status endpoint
+│   │   ├── chat/sessions/route.ts       # Chat endpoints
+│   │   └── rag/                         # RAG endpoints
+│   │       ├── documents/route.ts
+│   │       └── search/route.ts
+│   │
+│   ├── smart-loadbalancer/              # Main UI
+│   │   └── page.tsx                     # UI component
+│   │
+│   └── smart-loadbalancer-v4/           # Enhanced UI
+│       └── page.tsx                     # V4 UI component
+│
+├── lib/
+│   └── smart-loadbalancer-client.ts     # TypeScript API client
+│
+├── package.json                         # Dependencies
+└── README.md                            # This file
 ```
 
-## 🤝 Contributing
+## 🎯 Features
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit changes: `git commit -m 'Add feature'`
-4. Push to branch: `git push origin feature-name`
-5. Submit a pull request
+### Main Interface (`/smart-loadbalancer`)
+- **Connection Status** - Shows server and client connectivity
+- **Query Input** - Send prompts to the distributed AI system
+- **Response Display** - View AI-generated responses
+- **Client Information** - See connected clients and their models
+- **Real-time Updates** - Status updates every 10 seconds
 
-## 📄 License
+### Enhanced Interface (`/smart-loadbalancer-v4`)
+- All main features plus:
+- **Chat History** - Session-based conversations
+- **RAG Support** - Document upload and retrieval
+- **Multimodal Input** - Image support (if enabled)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📡 API Routes
 
-## 🆘 Support
+### Query Processing
+**Endpoint:** `POST /api/smart-loadbalancer/query`
 
-If you encounter any issues:
+**Request:**
+```json
+{
+  "prompt": "What is artificial intelligence?",
+  "session_id": "optional-session-id",
+  "use_rag": false,
+  "images": []
+}
+```
 
-1. Check the [Troubleshooting](#-troubleshooting) section
-2. Run the test script: `npm run test-chatbot`
-3. Check server logs in each terminal
-4. Ensure all prerequisites are installed correctly
+**Response:**
+```json
+{
+  "success": true,
+  "response": "AI-generated response...",
+  "session_id": "session-123",
+  "metadata": {
+    "context_used": ["RAG context", "Chat history"],
+    "images_received": 0,
+    "rag_enabled": false
+  }
+}
+```
 
-## 🎯 Quick Start Checklist
+### Status Check
+**Endpoint:** `POST /api/smart-loadbalancer/status`
 
-- [ ] Node.js installed
-- [ ] Python installed  
-- [ ] Ollama installed and running
-- [ ] Dependencies installed (`npm install` & `pip install -r requirements.txt`)
-- [ ] TinyLlama model downloaded (`ollama pull tinyllama`)
-- [ ] All servers running (Python, Node.js, Ollama, Next.js)
-- [ ] Accessing dashboard at http://localhost:3000
+**Request:**
+```json
+{
+  "serverAddress": "localhost:5001"
+}
+```
 
----
+**Response:**
+```json
+{
+  "success": true,
+  "status": {
+    "total_clients": 2,
+    "active_clients": 2,
+    "available_models": ["llama3.2:1b", "llama3.2:3b"],
+    "healthy": true
+  }
+}
+```
 
-**Happy Farming! 🌾🚜**
+### Chat Sessions
+**List Sessions:** `GET /api/smart-loadbalancer/chat/sessions?limit=50`
+
+**Create Session:** `POST /api/smart-loadbalancer/chat/sessions`
+```json
+{
+  "title": "New Chat"
+}
+```
+
+**Get Session:** `GET /api/smart-loadbalancer/chat/sessions/{id}`
+
+**Delete Session:** `DELETE /api/smart-loadbalancer/chat/sessions/{id}`
+
+### RAG Operations
+**Add Document:** `POST /api/smart-loadbalancer/rag/documents`
+```json
+{
+  "content": "Document content...",
+  "title": "Document Title",
+  "metadata": {}
+}
+```
+
+**Search Documents:** `POST /api/smart-loadbalancer/rag/search`
+```json
+{
+  "query": "search query",
+  "top_k": 3
+}
+```
+
+**Delete Document:** `DELETE /api/smart-loadbalancer/rag/documents/{id}`
+
+## 🔧 Configuration
+
+### Server Address
+Default: `localhost:5001`
+
+To change, update in the UI or modify:
+```typescript
+// lib/smart-loadbalancer-client.ts
+const config = {
+  serverAddress: 'localhost:5001'
+}
+```
+
+### Timeouts
+- Query timeout: 60 seconds
+- Status check timeout: 10 seconds
+
+Adjust in `lib/smart-loadbalancer-client.ts`:
+```typescript
+const config = {
+  timeout: 60000  // milliseconds
+}
+```
+
+## 🎨 UI Components
+
+### Connection Status
+Shows:
+- ✅ Connected / ❌ Disconnected
+- Number of active clients
+- Available models
+
+### Query Interface
+- Text input for prompts
+- Send button
+- Loading indicator
+- Response display
+
+### Client Information
+- Client ID
+- Assigned model
+- Performance score
+- Last seen timestamp
+
+## 🐛 Troubleshooting
+
+### Can't Connect to Server
+**Check HTTP wrapper is running:**
+```bash
+curl http://localhost:5001/health
+```
+
+**Expected response:**
+```json
+{
+  "healthy": true,
+  "connected_clients": 1
+}
+```
+
+**If fails:**
+- Ensure HTTP wrapper is running on port 5001
+- Check firewall settings
+- Verify server address in UI
+
+### No Response from Query
+**Possible causes:**
+1. No clients connected to server
+2. Server not running
+3. Network timeout
+4. Client processing error
+
+**Check status:**
+- Click "Connect" button
+- View client count
+- Check browser console for errors
+
+### CORS Errors
+The HTTP wrapper has CORS enabled for all origins in development.
+
+For production, update `server/smart_load_balancer_http_wrapper_v4.py`:
+```python
+CORS(app, origins=['https://yourdomain.com'])
+```
+
+### Slow Responses
+AI processing can take 10-30 seconds depending on:
+- Model size (1B faster than 8B)
+- Client hardware
+- Query complexity
+- Number of clients
+
+## 📊 Development
+
+### Run Development Server
+```bash
+npm run dev
+```
+
+### Build for Production
+```bash
+npm run build
+```
+
+### Start Production Server
+```bash
+npm start
+```
+
+### Lint Code
+```bash
+npm run lint
+```
+
+## 🔐 Security Notes
+
+**Development Mode:**
+- No authentication
+- CORS enabled for all origins
+- HTTP (not HTTPS)
+
+**For Production:**
+- Add authentication (NextAuth.js)
+- Restrict CORS origins
+- Enable HTTPS
+- Add rate limiting
+- Validate all inputs
+- Sanitize outputs
+
+## 💡 Usage Tips
+
+### Best Practices
+1. **Clear Prompts** - Be specific in your queries
+2. **Wait for Response** - AI processing takes time
+3. **Check Status** - Ensure clients are connected
+4. **Use Chat History** - For context-aware conversations
+5. **Monitor Performance** - Watch response times
+
+### Example Queries
+```
+"Explain quantum computing in simple terms"
+"Write a Python function to sort a list"
+"What are the benefits of fog computing?"
+"Summarize the key points about AI ethics"
+```
+
+### Chat Sessions
+1. Create a new session for each topic
+2. Previous messages provide context
+3. Delete old sessions to clean up
+4. Update session titles for organization
+
+### RAG Usage
+1. Upload relevant documents first
+2. Enable RAG in query options
+3. System will search and use context
+4. Better for domain-specific queries
+
+## 🎓 Advanced Features
+
+### TypeScript Client Library
+Use the client library in your own components:
+
+```typescript
+import { SmartLoadBalancerClient } from '@/lib/smart-loadbalancer-client'
+
+const client = new SmartLoadBalancerClient({
+  serverAddress: 'localhost:5001'
+})
+
+// Send query
+const response = await client.query('Your prompt here')
+
+// Get status
+const status = await client.getStatus()
+
+// Create chat session
+const session = await client.createChatSession('My Chat')
+```
+
+### Custom Components
+Create your own UI using the API routes:
+
+```typescript
+// In your component
+const response = await fetch('/api/smart-loadbalancer/query', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: 'Your prompt' })
+})
+
+const data = await response.json()
+```
+
+### Styling
+The UI uses Tailwind CSS. Customize in:
+- `app/smart-loadbalancer/page.tsx`
+- `tailwind.config.js`
+
+## 📝 Environment Variables
+
+Create `.env.local` for custom configuration:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5001
+NEXT_PUBLIC_TIMEOUT=60000
+```
+
+Access in code:
+```typescript
+const apiUrl = process.env.NEXT_PUBLIC_API_URL
+```
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+```bash
+npm run build
+vercel deploy
+```
+
+### Docker
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### Static Export
+```bash
+npm run build
+# Deploy the 'out' directory
+```
+
+## 📞 Support
+
+For issues:
+1. Check browser console for errors
+2. Verify server is running
+3. Check network connectivity
+4. Review API responses
+5. Check server logs
+
+## 🎉 Success Indicators
+
+You'll know it's working when:
+- ✅ Status shows "Connected"
+- ✅ Client count is > 0
+- ✅ Queries return responses
+- ✅ No errors in console
+- ✅ Response time is reasonable
