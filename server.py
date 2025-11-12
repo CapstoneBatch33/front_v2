@@ -20,7 +20,7 @@ def init_csv():
     if not os.path.exists(csv_file):
         with open(csv_file, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['timestamp', 'nitrogen', 'phosphorus', 'potassium', 'moisture', 'temperature', 'pH'])
+            writer.writerow(['timestamp', 'nitrogen', 'phosphorus', 'potassium', 'moisture', 'temperature', 'humidity'])
 
 @app.route("/")
 def home():
@@ -50,7 +50,7 @@ def receive_sensor_data():
                 data.get('potassium', 0),
                 data.get('moisture', 0),
                 data.get('temperature', 0),
-                data.get('pH', 0)
+                data.get('humidity', 0)
             ])
         
         return jsonify({"message": "Data received successfully"}), 200

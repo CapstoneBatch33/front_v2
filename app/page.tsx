@@ -155,7 +155,7 @@ export default function Home() {
               {
                 title: "Real-time Sensor Data",
                 description:
-                  "Monitor soil moisture, temperature, pH levels, and more with our advanced sensor network.",
+                  "Monitor soil moisture, temperature, humidity, and more with our advanced sensor network.",
                 icon: <Droplets className="h-10 w-10 text-primary" />,
               },
               {
@@ -205,7 +205,7 @@ export default function Home() {
               {
                 title: "Soil-Health Monitoring",
                 description:
-                  "Monitor soil moisture, temperature, pH levels, and more with our advanced sensor network.",
+                  "Monitor soil moisture, temperature, humidity, and more with our advanced sensor network.",
                 icon: <Mountain className="h-8 w-8 text-primary" />,
               },
               {

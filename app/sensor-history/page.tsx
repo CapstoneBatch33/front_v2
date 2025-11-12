@@ -18,7 +18,6 @@ interface SensorReading {
   temperature: number;
   humidity: number;
   soil_moisture: number;
-  ph_level: number;
   co2: number;
   light: number;
   location?: string;
@@ -106,9 +105,9 @@ export default function SensorHistoryPage() {
 
   const exportData = () => {
     const csvContent = [
-      "Timestamp,Temperature,Humidity,Soil Moisture,pH Level,CO2,Light,Location,Notes",
+      "Timestamp,Temperature,Humidity,Soil Moisture,CO2,Light,Location,Notes",
       ...filteredHistory.map(reading => 
-        `${reading.datetime},${reading.temperature},${reading.humidity},${reading.soil_moisture},${reading.ph_level},${reading.co2},${reading.light},"${reading.location || ''}","${reading.notes || ''}"`
+        `${reading.datetime},${reading.temperature},${reading.humidity},${reading.soil_moisture},${reading.co2},${reading.light},"${reading.location || ''}","${reading.notes || ''}"`
       )
     ].join("\n")
 
@@ -139,21 +138,18 @@ export default function SensorHistoryPage() {
       temperature: recent.reduce((sum, r) => sum + r.temperature, 0) / recent.length,
       humidity: recent.reduce((sum, r) => sum + r.humidity, 0) / recent.length,
       soil_moisture: recent.reduce((sum, r) => sum + r.soil_moisture, 0) / recent.length,
-      ph_level: recent.reduce((sum, r) => sum + r.ph_level, 0) / recent.length,
     }
 
     const olderAvg = {
       temperature: older.reduce((sum, r) => sum + r.temperature, 0) / older.length,
       humidity: older.reduce((sum, r) => sum + r.humidity, 0) / older.length,
       soil_moisture: older.reduce((sum, r) => sum + r.soil_moisture, 0) / older.length,
-      ph_level: older.reduce((sum, r) => sum + r.ph_level, 0) / older.length,
     }
 
     return {
       temperature: recentAvg.temperature - olderAvg.temperature,
       humidity: recentAvg.humidity - olderAvg.humidity,
       soil_moisture: recentAvg.soil_moisture - olderAvg.soil_moisture,
-      ph_level: recentAvg.ph_level - olderAvg.ph_level,
     }
   }
 
@@ -303,7 +299,7 @@ export default function SensorHistoryPage() {
                     />
                     <Legend />
                     <Line type="monotone" dataKey="soil_moisture" stroke="#22c55e" strokeWidth={2} name="Soil Moisture (%)" />
-                    <Line type="monotone" dataKey="ph_level" stroke="#a855f7" strokeWidth={2} name="pH Level" />
+                    <Line type="monotone" dataKey="humidity" stroke="#a855f7" strokeWidth={2} name="Humidity (%)" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -428,10 +424,7 @@ export default function SensorHistoryPage() {
                       <span className="text-muted-foreground">Soil Moisture</span>
                       <span className="font-medium">{reading.soil_moisture}%</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground">pH Level</span>
-                      <span className="font-medium">{reading.ph_level}</span>
-                    </div>
+
                     <div className="flex flex-col">
                       <span className="text-muted-foreground">CO₂</span>
                       <span className="font-medium">{reading.co2}ppm</span>

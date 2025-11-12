@@ -18,15 +18,14 @@ const fetchSensorData = async () => {
     
     if (result.success) {
       return {
-        moisture: result.data.soil_moisture || 42,
-        temperature: result.data.temperature || 24,
-        pH: result.data.ph_level || 6.2,
-        co2: result.data.co2 || 450,
-        light: result.data.light || 850,
-        humidity: result.data.humidity || 65,
-        nitrogen: result.data.nitrogen || 50,
-        phosphorus: result.data.phosphorus || 30,
-        potassium: result.data.potassium || 80
+        moisture: result.data.soil_moisture || 0,
+        temperature: result.data.temperature || 0,
+        humidity: result.data.humidity || 0,
+        co2: result.data.co2 || 0,
+        light: result.data.light || 0,
+        nitrogen: result.data.nitrogen || 0,
+        phosphorus: result.data.phosphorus || 0,
+        potassium: result.data.potassium || 0
       }
     }
   } catch (error) {
@@ -35,15 +34,14 @@ const fetchSensorData = async () => {
   
   // Fallback to default values
   return {
-    moisture: 42,
-    temperature: 24,
-    pH: 6.2,
-    co2: 450,
-    light: 850,
-    humidity: 65,
-    nitrogen: 50,
-    phosphorus: 30,
-    potassium: 80
+    moisture: 0,
+    temperature: 0,
+    humidity: 0,
+    co2: 0,
+    light: 0,
+    nitrogen: 0,
+    phosphorus: 0,
+    potassium: 0
   }
 }
 
@@ -54,7 +52,7 @@ const mockResponses: Record<string, string> = {
     "Hello there, farmer! I'm your digital farming companion, ready to help your crops thrive. Ask me about soil conditions, pest management, or anything else happening in your fields! 🌱",
   moisture: "Based on your current soil moisture reading, your soil is in the optimal range. No irrigation is needed at this time. I recommend checking again tomorrow morning. Remember: happy soil, happy plants!",
   temperature: "The current temperature is ideal for most crops. Your plants are enjoying this weather! If temperatures rise above 28°C, consider providing some shade for your more sensitive green friends.",
-  pH: "Your soil pH is slightly acidic, which is perfect for crops like potatoes, tomatoes, and blueberries. They'll be thriving in these conditions! For crops that prefer more neutral soil, consider adding a bit of agricultural lime.",
+  humidity: "Your current humidity level is good for most crops. Maintaining humidity between 40-80% helps prevent fungal diseases while keeping plants hydrated. Monitor closely during hot weather!",
   crops:
     "For your region and current season, I recommend planting: \n\n1. Maize/Corn - Thrives in your warm weather and will make excellent use of your soil conditions\n2. Tomatoes - Perfect match for your soil pH, and they'll love the current temperature range\n3. Leafy greens - Quick harvest cycle and great for crop rotation\n\nWould you like specific planting instructions for any of these green companions?",
   pests:

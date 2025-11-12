@@ -25,15 +25,14 @@ const fetchCurrentSensorData = async () => {
     if (result.success) {
       return {
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        moisture: result.data.soil_moisture || 45,
-        temperature: result.data.temperature || 22,
-        pH: result.data.ph_level?.toString() || "6.5",
-        co2: result.data.co2 || 450,
-        light: result.data.light || 800,
-        humidity: result.data.humidity || 65,
-        nitrogen: result.data.nitrogen || 50,
-        phosphorus: result.data.phosphorus || 30,
-        potassium: result.data.potassium || 80
+        moisture: result.data.soil_moisture || 0,
+        temperature: result.data.temperature || 0,
+        humidity: result.data.humidity || 0,
+        co2: result.data.co2 || 0,
+        light: result.data.light || 0,
+        nitrogen: result.data.nitrogen || 0,
+        phosphorus: result.data.phosphorus || 0,
+        potassium: result.data.potassium || 0
       }
     }
   } catch (error) {
@@ -43,15 +42,14 @@ const fetchCurrentSensorData = async () => {
   // Fallback to default values
   return {
     time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    moisture: 45,
-    temperature: 22,
-    pH: "6.5",
-    co2: 450,
-    light: 800,
-    humidity: 65,
-    nitrogen: 50,
-    phosphorus: 30,
-    potassium: 80
+    moisture: 0,
+    temperature: 0,
+    humidity: 0,
+    co2: 0,
+    light: 0,
+    nitrogen: 0,
+    phosphorus: 0,
+    potassium: 0
   }
 }
 
@@ -66,12 +64,12 @@ const generateInitialMockData = () => {
 
     data.push({
       time: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      moisture: Math.floor(Math.random() * 20) + 30,
-      temperature: Math.floor(Math.random() * 10) + 18,
-      pH: (Math.random() * 2 + 5).toFixed(1),
-      nitrogen: Math.floor(Math.random() * 40) + 30,
-      phosphorus: Math.floor(Math.random() * 30) + 15,
-      potassium: Math.floor(Math.random() * 40) + 60,
+      moisture: 0,
+      temperature: 0,
+      humidity: 0,
+      nitrogen: 0,
+      phosphorus: 0,
+      potassium: 0,
     })
   }
 
@@ -85,8 +83,8 @@ const getStatusColor = (value: number, type: string) => {
       return value < 35 ? "destructive" : value > 45 ? "yellow" : "green"
     case "temperature":
       return value < 20 ? "blue" : value > 25 ? "destructive" : "green"
-    case "pH":
-      return value < 6.0 ? "yellow" : value > 6.8 ? "yellow" : "green"
+    case "humidity":
+      return value < 40 ? "destructive" : value > 80 ? "yellow" : "green"
     case "nitrogen":
       return value < 40 ? "destructive" : value > 60 ? "yellow" : "green"
     case "phosphorus":
@@ -195,8 +193,8 @@ export default function Dashboard() {
       if (latest.temperature > 25) {
         setAlerts((prev) => [...prev, `High temperature detected: ${latest.temperature}°C`])
       }
-      if (latest.pH && parseFloat(latest.pH) < 6.0) {
-        setAlerts((prev) => [...prev, `Low soil pH detected: ${latest.pH}`])
+      if (latest.humidity && latest.humidity < 40) {
+        setAlerts((prev) => [...prev, `Low humidity detected: ${latest.humidity}%`])
       }
 
       // Limit alerts to last 5
@@ -238,13 +236,13 @@ export default function Dashboard() {
       return
     }
 
-    const headers = ['Timestamp', 'Temperature (°C)', 'pH Level', 'Soil Moisture (%)', 'Nitrogen (ppm)', 'Phosphorus (ppm)', 'Potassium (ppm)', 'Notes']
+    const headers = ['Timestamp', 'Temperature (°C)', 'Humidity (%)', 'Soil Moisture (%)', 'Nitrogen (ppm)', 'Phosphorus (ppm)', 'Potassium (ppm)', 'Notes']
     const csvContent = [
       headers.join(','),
       ...sensorHistory.map(row => [
         row.datetime || row.timestamp,
         row.temperature || '',
-        row.ph_level || row.pH || '',
+        row.humidity || '',
         row.soil_moisture || row.moisture || '',
         row.nitrogen || '',
         row.phosphorus || '',
@@ -289,8 +287,7 @@ export default function Dashboard() {
     try {
       const sensorData = dataSource === 'current' ? {
         temperature: currentValues.temperature,
-        ph_level: currentValues.ph_level,
-        pH: currentValues.ph_level,
+        humidity: currentValues.humidity,
         soil_moisture: currentValues.soil_moisture,
         moisture: currentValues.soil_moisture,
         nitrogen: currentValues.nitrogen,
@@ -299,8 +296,7 @@ export default function Dashboard() {
         timestamp: new Date().toISOString()
       } : {
         temperature: selectedReading.temperature,
-        ph_level: selectedReading.ph_level,
-        pH: selectedReading.ph_level,
+        humidity: selectedReading.humidity,
         soil_moisture: selectedReading.soil_moisture,
         moisture: selectedReading.soil_moisture,
         nitrogen: selectedReading.nitrogen,
@@ -389,7 +385,6 @@ export default function Dashboard() {
             temperature: currentReading.temperature,
             humidity: currentReading.humidity,
             moisture: currentReading.moisture,
-            pH: currentReading.pH,
             nitrogen: currentReading.nitrogen,
             phosphorus: currentReading.phosphorus,
             potassium: currentReading.potassium,
@@ -552,15 +547,15 @@ export default function Dashboard() {
                 color: "red"
               },
               {
-                name: "pH Level",
-                value: Number.parseFloat(currentValues.pH),
-                unit: "",
-                icon: <Leaf className="h-6 w-6" />,
-                type: "pH",
+                name: "Humidity",
+                value: currentValues.humidity,
+                unit: "%",
+                icon: <Droplets className="h-6 w-6" />,
+                type: "humidity",
                 min: 0,
-                max: 14,
-                optimal: [6.0, 6.8],
-                color: "green"
+                max: 100,
+                optimal: [40, 80],
+                color: "blue"
               },
               {
                 name: "Soil Moisture",
@@ -762,7 +757,7 @@ export default function Dashboard() {
 
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">pH Level Trend</CardTitle>
+                        <CardTitle className="text-lg">Humidity Trend</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="h-[200px]">
@@ -901,7 +896,7 @@ export default function Dashboard() {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm mb-2">
                           <div>Temp: {reading.temperature}°C</div>
-                          <div>pH: {reading.ph_level}</div>
+                          <div>Humidity: {reading.humidity}%</div>
                           <div>Moisture: {reading.soil_moisture}%</div>
                           <div>Nitrogen: {reading.nitrogen}ppm</div>
                           <div>Phosphorus: {reading.phosphorus}ppm</div>
@@ -959,7 +954,7 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>pH Level</CardTitle>
+                <CardTitle>Humidity</CardTitle>
                 <CardDescription>24-hour history</CardDescription>
               </CardHeader>
               <CardContent>
@@ -973,7 +968,7 @@ export default function Dashboard() {
                       <Legend />
                       <Line
                         type="monotone"
-                        dataKey="pH"
+                        dataKey="humidity"
                         stroke="#22c55e"
                         strokeWidth={2}
                         dot={false}

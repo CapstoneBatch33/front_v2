@@ -69,13 +69,13 @@ async function getSensorData() {
     console.error('Error fetching sensor data:', error);
     // Return default values if API is not available
     return {
-      nitrogen: 50,
-      phosphorus: 30,
-      potassium: 80,
-      pH: 6.5,
-      moisture: 45,
-      temperature: 25,
-      co2: 450
+      nitrogen: 0,
+      phosphorus: 0,
+      potassium: 0,
+      humidity: 0,
+      moisture: 0,
+      temperature: 0,
+      co2: 0
     };
   }
 }
@@ -92,13 +92,13 @@ app.post('/api/assistant', async (req, res) => {
 
   // Use default sensor data
   const sensorData = {
-    nitrogen: 50,
-    phosphorus: 30,
-    potassium: 80,
-    pH: 6.5,
-    moisture: 45,
-    temperature: 25,
-    co2: 450
+    nitrogen: 0,
+    phosphorus: 0,
+    potassium: 0,
+    humidity: 0,
+    moisture: 0,
+    temperature: 0,
+    co2: 0
   };
 
   // System prompt for the farming assistant

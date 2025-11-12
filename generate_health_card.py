@@ -82,9 +82,9 @@ def create_soil_health_card(farmer_data, soil_test_results, recommendations):
                 if 20 <= val <= 30: return 'Optimal'
                 elif 15 <= val <= 35: return 'Good'
                 else: return 'Poor'
-            elif param == 'ph':
-                if 6.0 <= val <= 7.5: return 'Optimal'
-                elif 5.5 <= val <= 8.0: return 'Good'
+            elif param == 'humidity':
+                if 40 <= val <= 80: return 'Optimal'
+                elif 30 <= val <= 90: return 'Good'
                 else: return 'Poor'
             elif param == 'moisture':
                 if 40 <= val <= 70: return 'Optimal'
@@ -102,7 +102,7 @@ def create_soil_health_card(farmer_data, soil_test_results, recommendations):
     # Test results data
     test_params = [
         ('1', 'Temperature', soil_test_results.get('temperature', '0'), '°C', get_rating('temperature', soil_test_results.get('temperature', '0'))),
-        ('2', 'pH Level', soil_test_results.get('ph_level', soil_test_results.get('pH', '0')), '', get_rating('ph', soil_test_results.get('ph_level', soil_test_results.get('pH', '0')))),
+        ('2', 'Humidity', soil_test_results.get('humidity', '0'), '%', get_rating('humidity', soil_test_results.get('humidity', '0'))),
         ('3', 'Soil Moisture', soil_test_results.get('soil_moisture', soil_test_results.get('moisture', '0')), '%', get_rating('moisture', soil_test_results.get('soil_moisture', soil_test_results.get('moisture', '0')))),
         ('4', 'Nitrogen', soil_test_results.get('nitrogen', '0'), 'ppm', get_rating('nitrogen', soil_test_results.get('nitrogen', '0'))),
         ('5', 'Phosphorus', soil_test_results.get('phosphorus', '0'), 'ppm', get_rating('phosphorus', soil_test_results.get('phosphorus', '0'))),

@@ -218,7 +218,7 @@ export default function LLMTestPage() {
       '1B': [
         "What are the best practices for rice cultivation?",
         "How to prevent pest attacks in wheat crops?",
-        "What is the ideal soil pH for tomato farming?"
+        "What is the ideal humidity level for tomato farming?"
       ],
       '3B': [
         "Provide a detailed crop rotation plan for a 10-acre farm with wheat and rice.",

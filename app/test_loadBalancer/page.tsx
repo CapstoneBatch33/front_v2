@@ -114,10 +114,9 @@ export default function LoadBalancerTestPage() {
   
   // Sensor Test State
   const [sensorData, setSensorData] = useState({
-    temperature: "25.5",
-    humidity: "65.0",
-    soil_moisture: "35.2",
-    ph_level: "6.8"
+    temperature: "0",
+    humidity: "0",
+    soil_moisture: "0"
   })
 
   // Connection Test
@@ -730,10 +729,10 @@ export default function LoadBalancerTestPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="ph-level">pH Level</Label>
+                      <Label htmlFor="humidity">Humidity (%)</Label>
                       <Input
-                        id="ph-level"
-                        value={sensorData.ph_level}
+                        id="humidity"
+                        value={sensorData.humidity}
                         onChange={(e) => setSensorData(prev => ({
                           ...prev,
                           ph_level: e.target.value
