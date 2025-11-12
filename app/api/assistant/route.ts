@@ -21,23 +21,33 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ question }),
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(30000) // 30 second timeout
+        // Increase timeout for TinyLlama processing (2 minutes)
+        signal: AbortSignal.timeout(120000) // 120 second timeout
       })
 
       if (backendResponse.ok) {
         const data = await backendResponse.json()
         return NextResponse.json({
           success: true,
-          answer: data.answer,
-          category: data.category || 'General Query'
+          answer: data.answer
         })
       } else {
-        console.log('Backend server not available, using fallback')
+        const errorText = await backendResponse.text()
+        console.log('Backend server error:', backendResponse.status, errorText)
         throw new Error('Backend not available')
       }
-    } catch (error) {
-      console.log('Backend error, using fallback responses:', error)
+    } catch (error: any) {
+      // Only use fallback if it's a connection error, not a timeout
+      if (error.name === 'TimeoutError') {
+        console.log('Backend timeout - TinyLlama is taking too long')
+        return NextResponse.json({
+          success: false,
+          error: 'The AI model is taking longer than expected. Please try a simpler question or wait a moment and try again.',
+          answer: 'The AI model is taking longer than expected to respond. This can happen with complex questions. Please try:\n\n1. Asking a simpler, more direct question\n2. Waiting a moment and trying again\n3. Checking that Ollama is running properly'
+        }, { status: 504 })
+      }
+      
+      console.log('Backend connection error, using fallback responses:', error)
       
       // Fallback to mock responses when backend is not available
       const mockResponses = {
@@ -53,40 +63,30 @@ export async function POST(request: NextRequest) {
       }
 
       let answer = mockResponses.default
-      let category = "General Query"
 
       const lowerQuestion = question.toLowerCase()
       
       if (lowerQuestion.includes('moisture') || lowerQuestion.includes('water')) {
         answer = mockResponses.moisture
-        category = "Irrigation Related"
       } else if (lowerQuestion.includes('temperature') || lowerQuestion.includes('temp')) {
         answer = mockResponses.temperature
-        category = "General Query"
       } else if (lowerQuestion.includes('ph') || lowerQuestion.includes('soil')) {
         answer = mockResponses.ph
-        category = "Soil Nutrition"
       } else if (lowerQuestion.includes('crop') || lowerQuestion.includes('plant')) {
         answer = mockResponses.crops
-        category = "General Query"
       } else if (lowerQuestion.includes('pest') || lowerQuestion.includes('bug')) {
         answer = mockResponses.pests
-        category = "General Query"
       } else if (lowerQuestion.includes('fertilizer') || lowerQuestion.includes('nutrient')) {
         answer = mockResponses.fertilizer
-        category = "Soil Nutrition"
       } else if (lowerQuestion.includes('irrigation') || lowerQuestion.includes('watering')) {
         answer = mockResponses.irrigation
-        category = "Irrigation Related"
       } else if (lowerQuestion.includes('disease') || lowerQuestion.includes('sick')) {
         answer = mockResponses.disease
-        category = "Disease Detection"
       }
 
       return NextResponse.json({
         success: true,
         answer,
-        category,
         fallback: true
       })
     }
@@ -96,8 +96,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: false, 
       error: `API error: ${error.message}`,
-      answer: "I'm sorry, I'm having trouble processing your request right now. Please try again later.",
-      category: "Error"
+      answer: "I'm sorry, I'm having trouble processing your request right now. Please try again later."
     }, { status: 500 })
   }
 }

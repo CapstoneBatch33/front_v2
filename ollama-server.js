@@ -16,8 +16,10 @@ const queryTinyLlamaStream = async (prompt) => {
       model: "tinyllama",  // Specify the TinyLlama model
       prompt: prompt,
       stream: true,
-      temperature: 0.7,
+      temperature: 0.3,  // Lower temperature for more focused responses
       top_p: 0.9,
+      num_predict: 200,  // Limit response length
+      stop: ["\n\nQuestion:", "\nQuestion:", "Question:", "\n\n\n"],  // Stop sequences
     }, {
       responseType: 'stream',
     });
@@ -80,7 +82,7 @@ async function getSensorData() {
   }
 }
 
-// Endpoint to handle farming questions and classification
+// Endpoint to handle farming questions
 app.post('/api/assistant', async (req, res) => {
   const { question } = req.body;
 
@@ -90,80 +92,49 @@ app.post('/api/assistant', async (req, res) => {
 
   console.log('Received question:', question);
 
-  // Use default sensor data
-  const sensorData = {
-    nitrogen: 0,
-    phosphorus: 0,
-    potassium: 0,
-    humidity: 0,
-    moisture: 0,
-    temperature: 0,
-    co2: 0
-  };
+  // Check for simple greetings or casual messages
+  const lowerQuestion = question.toLowerCase().trim();
+  
+  // More flexible greeting detection
+  const isGreeting = /^(hi+|hello+|hey+|greetings?|good\s+(morning|afternoon|evening|day))[\s!.]*$/i.test(lowerQuestion);
+  
+  // Handle greetings directly without calling the model
+  if (isGreeting) {
+    const greetingResponse = "Hello! I'm your farming assistant for Wheat and Maize crops. How can I help you today? You can ask me about:\n\n• Planting and growing tips\n• Pest and disease management\n• Irrigation and watering\n• Soil nutrition and fertilizers\n• Harvesting advice";
+    console.log('Greeting detected, sending quick response');
+    return res.json({ answer: greetingResponse });
+  }
 
-  // System prompt for the farming assistant
-  const system_prompt = "You are a highly knowledgeable and helpful assistant for farmers. You specialize in answering questions related to Wheat and Maize crops. " +
-    "Your goal is to provide accurate, clear, and practical advice on farming practices, pest control, irrigation, " +
-    "soil nutrition, and disease prevention. You are expected to give precise, actionable, and simple advice suitable for " +
-    "farmers with varying levels of expertise.\n" +
-    "When answering, ensure that your responses are easy to understand, include important details, and are framed in a way " +
-    "that helps farmers implement the advice directly.\n" +
-    "Additionally, after answering the question, classify it into one of the following categories: " +
-    "1. Disease Detection, 2. General Query, 3. Irrigation Related, or 4. Soil Nutrition.\n" +
-    "Always respond as a knowledgeable farming expert, providing helpful solutions for real-world farming challenges.\n\n" +
-    "If you're uncertain about the question or its context, clarify before answering.";
+  // System prompt for the farming assistant - simplified to prevent rambling
+  const system_prompt = "You are a helpful farming expert specializing in Wheat and Maize crops. " +
+    "Answer the farmer's question directly and concisely with practical advice they can use immediately. " +
+    "Use simple language and include specific details like quantities and timings when relevant. " +
+    "Keep your answer focused and under 200 words.";
 
-  const answerPrompt = `${system_prompt}\nFarmer's Question: ${question}\nAnswer:`;
-
-  console.log('Querying TinyLlama...');
+  const answerPrompt = `${system_prompt}\n\nQuestion: ${question}\n\nAnswer:`;
 
   try {
     let fullResponse = await queryTinyLlamaStream(answerPrompt);
     console.log('\nAnswer generated, length:', fullResponse.length);
 
-    // Extract only the answer part after "Answer:" if it exists
-    let answer = fullResponse;
-    if (answer.includes("Answer:")) {
-      answer = answer.split("Answer:")[1].trim();
-    }
-
-    // Clean up the answer to remove classification text
-    const classificationPatterns = [
-      /Category:\s*\d+\.?\s*[\w\s]+/i,
-      /This question falls under the category of\s*[\w\s]+/i,
-      /This is a\s*(Disease Detection|General Query|Irrigation Related|Soil Nutrition)\s*question/i,
-      /Classify this as\s*[\w\s]+/i,
-      /Classification:\s*[\w\s]+/i,
-    ];
-
-    for (const pattern of classificationPatterns) {
-      answer = answer.replace(pattern, '');
-    }
-
-    answer = answer.trim();
-    console.log('Cleaned answer:', answer);
-
-    // Classify the question separately
-    console.log('Classifying question...');
-    const classifyPrompt = `Classify the following question into one of these categories:\n1. Disease Detection\n2. General Query\n3. Irrigation Related\n4. Soil Nutrition\n\nQuestion: ${question}\nCategory:`;
+    // Clean up the response - but DON'T crop it
+    let answer = fullResponse.trim();
     
-    const category = await queryTinyLlamaStream(classifyPrompt);
-    console.log('Question classified as:', category);
+    // Remove any repeated "Answer:" labels at the start
+    if (answer.startsWith("Answer:")) {
+      answer = answer.substring(7).trim();
+    }
 
-    const cleanCategory = category.trim().split('\n')[0].replace(/^\d+\.\s*/, '');
+    console.log('Final answer:', answer);
 
-    res.json({ 
-      answer, 
-      category: cleanCategory
-    });
+    res.json({ answer });
 
     console.log('Response sent successfully');
   } catch (error) {
     console.error("Error processing request:", error);
     res.status(500).json({ 
       error: "Failed to process request", 
-      answer: "I'm sorry, I couldn't process your request at this time. Please try again later.",
-      category: "Error"
+      answer: "I'm sorry, I couldn't process your request at this time. Please try again later."
     });
   }
 });

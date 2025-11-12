@@ -164,6 +164,16 @@ export default function ChatbotPage() {
     setInput("")
     setIsTyping(true)
 
+    // Add a "thinking" message
+    const thinkingMessage: Message = {
+      id: Date.now().toString() + "-thinking",
+      content: "Let me think about that...",
+      sender: "bot",
+      timestamp: new Date(),
+      isLoading: true,
+    }
+    setMessages((prev) => [...prev, thinkingMessage])
+
     try {
       // Call the real AI assistant API
       const response = await fetch('/api/assistant', {
@@ -175,6 +185,9 @@ export default function ChatbotPage() {
       })
 
       const result = await response.json()
+      
+      // Remove the thinking message
+      setMessages((prev) => prev.filter(msg => msg.id !== thinkingMessage.id))
 
       if (result.answer) {
         // Update sensor data if provided
@@ -194,16 +207,14 @@ export default function ChatbotPage() {
         }
 
         setMessages((prev) => [...prev, botMessage])
-
-        // Update suggestions based on category
-        if (result.category) {
-          updateSuggestionsBasedOnCategory(result.category)
-        }
       } else {
         throw new Error('No response from AI assistant')
       }
     } catch (error) {
       console.error('Error calling AI assistant:', error)
+      
+      // Remove the thinking message
+      setMessages((prev) => prev.filter(msg => msg.id !== thinkingMessage.id))
       
       // Fallback to mock response
       let responseContent = mockResponses.default
@@ -232,42 +243,6 @@ export default function ChatbotPage() {
     }
 
     setIsTyping(false)
-  }
-
-  const updateSuggestionsBasedOnCategory = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'irrigation related':
-        setSuggestions([
-          "When should I water my crops?",
-          "What's the ideal soil moisture?",
-          "How to improve water retention?",
-          "Show me irrigation recommendations",
-        ])
-        break
-      case 'soil nutrition':
-        setSuggestions([
-          "What fertilizer should I use?",
-          "How to improve soil nutrients?",
-          "What's my NPK levels?",
-          "Organic vs synthetic fertilizers?",
-        ])
-        break
-      case 'disease detection':
-        setSuggestions([
-          "Scan a plant leaf for diseases",
-          "Common plant diseases in my area?",
-          "How to prevent plant diseases?",
-          "Organic disease treatments?",
-        ])
-        break
-      default:
-        setSuggestions([
-          "Best crops for this season?",
-          "What's my soil moisture level?",
-          "Help me with common pests?",
-          "What fertilizer should I use?",
-        ])
-    }
   }
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
