@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, serverAddress = 'localhost:5001', session_id, use_rag, images } = await request.json()
+    const { prompt, serverAddress = 'localhost:5000', session_id, use_rag, images } = await request.json()
 
     if (!prompt) {
       return NextResponse.json(

@@ -103,5 +103,6 @@ def get_sensor_history():
 
 if __name__ == "__main__":
     print("Starting Smart Farm Flask server...")
+    print("📡 Sensor API available on http://localhost:5010")
     init_csv()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5010, debug=True)

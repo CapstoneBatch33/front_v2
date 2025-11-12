@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // You can change this to your Raspberry Pi's IP address
 const RASPBERRY_PI_IP = process.env.RASPBERRY_PI_IP || 'rpi-desktop.local'
-const RASPBERRY_PI_PORT = process.env.RASPBERRY_PI_PORT || '5000'
+const RASPBERRY_PI_PORT = process.env.RASPBERRY_PI_PORT || '5010'
 
 export async function GET(request: NextRequest) {
   try {

@@ -25,7 +25,7 @@ import { toast } from "sonner"
 import { SmartLoadBalancerClient, type ClientInfo } from "@/lib/smart-loadbalancer-client"
 
 export default function SmartLoadBalancerPage() {
-  const [serverAddress, setServerAddress] = useState("localhost:5001")
+  const [serverAddress, setServerAddress] = useState("localhost:5000")
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [prompt, setPrompt] = useState("")
@@ -154,7 +154,7 @@ export default function SmartLoadBalancerPage() {
                 id="server-address"
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
-                placeholder="localhost:5001"
+                placeholder="localhost:5000"
               />
             </div>
             <div className="flex items-end">

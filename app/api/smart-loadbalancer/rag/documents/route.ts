@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, title, metadata, serverAddress = 'localhost:5001' } = await request.json()
+    const { content, title, metadata, serverAddress = 'localhost:5000' } = await request.json()
 
     if (!content) {
       return NextResponse.json(

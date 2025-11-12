@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, top_k, serverAddress = 'localhost:5001' } = await request.json()
+    const { query, top_k, serverAddress = 'localhost:5000' } = await request.json()
 
     if (!query) {
       return NextResponse.json(

@@ -52,7 +52,7 @@ interface ChatSession {
 }
 
 export default function SmartLoadBalancerV4Page() {
-  const [serverAddress, setServerAddress] = useState("localhost:5001")
+  const [serverAddress, setServerAddress] = useState("localhost:5000")
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [prompt, setPrompt] = useState("")

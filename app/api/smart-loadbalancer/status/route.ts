@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { serverAddress = 'localhost:5001' } = await request.json()
+    const { serverAddress = 'localhost:5000' } = await request.json()
 
     const response = await fetch(`http://${serverAddress}/status`, {
       method: 'GET',
